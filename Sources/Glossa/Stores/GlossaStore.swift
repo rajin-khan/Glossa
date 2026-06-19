@@ -35,6 +35,8 @@ final class GlossaStore: ObservableObject {
     @Published var pipelineStats: SubtitlePipelineStats = .idle
     @Published var transcriptionStatus: TranscriptionStatus = .idle
 
+    let translationBroker = TranslationRequestBroker()
+
     private let captureService: AudioCaptureServing
     private let permissionService: CapturePermissionService
     private var transcriptionService: TranscriptionServing
@@ -73,6 +75,9 @@ final class GlossaStore: ObservableObject {
             self.transcriptionStatus = self.transcriptionService.receive(chunk: chunk)
         }
         attachTranscriptionHandlers()
+        translationBroker.setResultHandler { [weak self] segment in
+            self?.append(segment: segment)
+        }
         recentSegments = [
             TranscriptSegment(
                 sourceText: "Glossa is ready to listen.",
@@ -114,6 +119,7 @@ final class GlossaStore: ObservableObject {
         }
         subtitlePipeline.reset()
         transcriptionStatus = transcriptionService.stop()
+        translationBroker.reset()
         pipelineStats = .idle
         captureMetrics = .idle
         listeningState = .idle
@@ -252,12 +258,8 @@ final class GlossaStore: ObservableObject {
             self?.transcriptionStatus = status
         }
         transcriptionService.setTranscriptHandler { [weak self] event in
-            self?.append(
-                source: event.text,
-                translation: event.text,
-                sourceLanguage: event.sourceLanguage,
-                isFinal: event.isFinal
-            )
+            guard let self else { return }
+            self.translationBroker.submit(event: event, targetLanguage: self.targetLanguage)
         }
     }
 

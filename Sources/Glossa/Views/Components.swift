@@ -257,3 +257,35 @@ struct TranscriptionStatusView: View {
         }
     }
 }
+
+struct TranslationStatusView: View {
+    let status: TranslationStatus
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Label("Translation", systemImage: "character.book.closed")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Text(status.label)
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(color)
+                .lineLimit(1)
+        }
+    }
+
+    private var color: Color {
+        switch status {
+        case .idle, .unavailable:
+            .secondary.opacity(0.72)
+        case .preparing:
+            .yellow
+        case .ready, .translating:
+            .teal
+        case .failed:
+            .red
+        }
+    }
+}
