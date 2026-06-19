@@ -226,3 +226,32 @@ struct PipelineStatsView: View {
         return "\(stats.receivedFrameCount) frames · \(stats.emittedChunkCount) chunks · \(stats.bufferedAudioDuration.formatted(.number.precision(.fractionLength(1))))s · \(speech)"
     }
 }
+
+struct TranscriptionStatusView: View {
+    let status: TranscriptionStatus
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Label("Transcription", systemImage: "text.bubble")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Text(status.label)
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(color)
+        }
+    }
+
+    private var color: Color {
+        switch status {
+        case .idle, .stopped:
+            .secondary.opacity(0.72)
+        case .ready, .receiving:
+            .teal
+        case .failed:
+            .red
+        }
+    }
+}

@@ -71,6 +71,7 @@ struct MainPanelView: View {
                 .foregroundStyle(.tertiary)
             AudioLevelMeter(metrics: store.captureMetrics)
             PipelineStatsView(stats: store.pipelineStats)
+            TranscriptionStatusView(status: store.transcriptionStatus)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)

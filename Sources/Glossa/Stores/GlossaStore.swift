@@ -10,18 +10,22 @@ final class GlossaStore: ObservableObject {
     @Published var captureMetrics: AudioCaptureMetrics = .idle
     @Published var permissions: CapturePermissionSnapshot = .unknown
     @Published var pipelineStats: SubtitlePipelineStats = .idle
+    @Published var transcriptionStatus: TranscriptionStatus = .idle
 
     private let captureService: AudioCaptureServing
     private let permissionService: CapturePermissionService
+    private let transcriptionService: TranscriptionServing
     private let subtitlePipeline = SubtitlePipeline()
     private var previewTask: Task<Void, Never>?
 
     init(
         captureService: AudioCaptureServing = SystemAudioCaptureService(),
-        permissionService: CapturePermissionService = CapturePermissionService()
+        permissionService: CapturePermissionService = CapturePermissionService(),
+        transcriptionService: TranscriptionServing = DebugTranscriptionService()
     ) {
         self.captureService = captureService
         self.permissionService = permissionService
+        self.transcriptionService = transcriptionService
         captureService.setMetricsHandler { [weak self] metrics in
             guard let self else { return }
             var next = metrics
@@ -31,6 +35,10 @@ final class GlossaStore: ObservableObject {
         captureService.setFrameHandler { [weak self] frame in
             guard let self else { return }
             self.pipelineStats = self.subtitlePipeline.receive(frame: frame)
+        }
+        subtitlePipeline.setChunkHandler { [weak self] chunk in
+            guard let self else { return }
+            self.transcriptionStatus = self.transcriptionService.receive(chunk: chunk)
         }
         recentSegments = [
             TranscriptSegment(
@@ -72,6 +80,7 @@ final class GlossaStore: ObservableObject {
             await captureService.stop()
         }
         subtitlePipeline.reset()
+        transcriptionStatus = transcriptionService.stop()
         pipelineStats = .idle
         captureMetrics = .idle
         listeningState = .idle
@@ -101,6 +110,7 @@ final class GlossaStore: ObservableObject {
 
     private func startCapture() {
         listeningState = .starting
+        transcriptionStatus = transcriptionService.start(targetLanguage: targetLanguage)
 
         Task {
             do {
@@ -121,6 +131,7 @@ final class GlossaStore: ObservableObject {
                     isFinal: true
                 )
             } catch {
+                transcriptionStatus = transcriptionService.stop()
                 listeningState = .failed(error.localizedDescription)
                 append(
                     source: "Capture could not start.",
@@ -134,6 +145,7 @@ final class GlossaStore: ObservableObject {
 
     private func startPreview() {
         listeningState = .previewing
+        transcriptionStatus = transcriptionService.start(targetLanguage: targetLanguage)
         let samples = [
             TranscriptSegment(
                 sourceText: "Bonjour, bienvenue dans Glossa.",

@@ -15,6 +15,11 @@ final class SubtitlePipeline {
     private var latestChannelCount = 1
     private var chunkLevelSum = 0.0
     private var chunkLevelFrameCount = 0
+    private var chunkHandler: ((AudioChunk) -> Void)?
+
+    func setChunkHandler(_ handler: ((AudioChunk) -> Void)?) {
+        chunkHandler = handler
+    }
 
     func receive(frame: AudioFrame) -> SubtitlePipelineStats {
         receivedFrameCount += 1
@@ -37,7 +42,7 @@ final class SubtitlePipeline {
         bufferedAudioDuration = duration(for: bufferedSamples)
 
         if bufferedAudioDuration >= targetChunkDuration {
-            _ = emitChunk(endedAt: frame.capturedAt)
+            emitChunk(endedAt: frame.capturedAt)
         }
 
         return SubtitlePipelineStats(
@@ -61,8 +66,8 @@ final class SubtitlePipeline {
         chunkLevelFrameCount = 0
     }
 
-    private func emitChunk(endedAt: Date) -> AudioChunk? {
-        guard !bufferedSamples.isEmpty else { return nil }
+    private func emitChunk(endedAt: Date) {
+        guard !bufferedSamples.isEmpty else { return }
 
         emittedChunkCount += 1
         let chunk = AudioChunk(
@@ -80,7 +85,7 @@ final class SubtitlePipeline {
         chunkLevelSum = 0
         chunkLevelFrameCount = 0
 
-        return chunk
+        chunkHandler?(chunk)
     }
 
     private func duration(for samples: [Float]) -> TimeInterval {
