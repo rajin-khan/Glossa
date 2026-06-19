@@ -33,6 +33,12 @@ struct MenuBarContent: View {
 
         Divider()
 
+        Button("Check Permissions") {
+            Task { await store.refreshPermissions() }
+        }
+
+        Divider()
+
         Button("Open Glossa") {
             openWindow(id: "main")
         }

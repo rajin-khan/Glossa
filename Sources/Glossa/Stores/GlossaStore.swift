@@ -8,12 +8,18 @@ final class GlossaStore: ObservableObject {
     @Published var recentSegments: [TranscriptSegment] = []
     @Published var overlayVisible = true
     @Published var captureMetrics: AudioCaptureMetrics = .idle
+    @Published var permissions: CapturePermissionSnapshot = .unknown
 
     private let captureService: AudioCaptureServing
+    private let permissionService: CapturePermissionService
     private var previewTask: Task<Void, Never>?
 
-    init(captureService: AudioCaptureServing = SystemAudioCaptureService()) {
+    init(
+        captureService: AudioCaptureServing = SystemAudioCaptureService(),
+        permissionService: CapturePermissionService = CapturePermissionService()
+    ) {
         self.captureService = captureService
+        self.permissionService = permissionService
         captureService.setMetricsHandler { [weak self] metrics in
             guard let self else { return }
             var next = metrics
@@ -73,11 +79,31 @@ final class GlossaStore: ObservableObject {
         recentSegments.removeAll()
     }
 
+    func refreshPermissions() async {
+        permissions = await permissionService.snapshot()
+    }
+
+    func requestScreenRecordingPermission() async {
+        permissions = await permissionService.requestScreenRecording()
+    }
+
+    func requestMicrophonePermission() async {
+        permissions = await permissionService.requestMicrophone()
+    }
+
     private func startCapture() {
         listeningState = .starting
 
         Task {
             do {
+                await refreshPermissions()
+                if captureMode == .systemAudio && !permissions.screenRecording.isReady {
+                    throw AudioCaptureError.screenRecordingPermissionRequired
+                }
+                if captureMode == .microphone && !permissions.microphone.isReady {
+                    throw AudioCaptureError.microphonePermissionRequired
+                }
+
                 try await captureService.start(mode: captureMode)
                 listeningState = .listening
                 append(

@@ -10,6 +10,7 @@ struct MainPanelView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     statusPanel
+                    permissionPanel
                     languagePanel
                     subtitlePreview
                     transcriptList
@@ -94,6 +95,46 @@ struct MainPanelView: View {
             }
             .labelsHidden()
             .frame(width: 230)
+        }
+        .padding(18)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var permissionPanel: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Permissions")
+                        .font(.headline)
+                    Text("Glossa needs capture access before it can listen to system audio.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button("Refresh") {
+                    Task { await store.refreshPermissions() }
+                }
+            }
+
+            PermissionRow(
+                title: "System Audio",
+                detail: "Uses macOS Screen Recording permission for ScreenCaptureKit audio.",
+                state: store.permissions.screenRecording,
+                actionTitle: "Request"
+            ) {
+                Task { await store.requestScreenRecordingPermission() }
+            }
+
+            PermissionRow(
+                title: "Microphone Fallback",
+                detail: "Used only when you switch capture mode to Microphone.",
+                state: store.permissions.microphone,
+                actionTitle: "Request"
+            ) {
+                Task { await store.requestMicrophonePermission() }
+            }
         }
         .padding(18)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))

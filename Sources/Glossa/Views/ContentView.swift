@@ -10,5 +10,8 @@ struct ContentView: View {
             MainPanelView(store: store)
         }
         .background(.regularMaterial)
+        .task {
+            await store.refreshPermissions()
+        }
     }
 }

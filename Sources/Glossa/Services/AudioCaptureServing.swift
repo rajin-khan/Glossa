@@ -10,6 +10,8 @@ protocol AudioCaptureServing: AnyObject {
 enum AudioCaptureError: LocalizedError {
     case microphoneNotImplemented
     case noShareableDisplay
+    case screenRecordingPermissionRequired
+    case microphonePermissionRequired
     case unsupportedMode
 
     var errorDescription: String? {
@@ -18,6 +20,10 @@ enum AudioCaptureError: LocalizedError {
             "Microphone capture is planned, but this first milestone is focused on system audio."
         case .noShareableDisplay:
             "Glossa could not find a display for ScreenCaptureKit audio capture."
+        case .screenRecordingPermissionRequired:
+            "System audio capture needs Screen Recording permission. Grant it in the permission panel, then start listening again."
+        case .microphonePermissionRequired:
+            "Microphone capture needs microphone permission. Grant it in the permission panel, then start listening again."
         case .unsupportedMode:
             "This capture mode is not available yet."
         }
