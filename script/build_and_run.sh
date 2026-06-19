@@ -8,7 +8,6 @@ MIN_SYSTEM_VERSION="14.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
-LOCAL_HOME="$ROOT_DIR/.build/home"
 LOCAL_CACHE="$ROOT_DIR/.build/cache"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
@@ -16,8 +15,7 @@ APP_MACOS="$APP_CONTENTS/MacOS"
 APP_BINARY="$APP_MACOS/$APP_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 
-mkdir -p "$LOCAL_HOME" "$LOCAL_CACHE" "$ROOT_DIR/.build/module-cache"
-export HOME="$LOCAL_HOME"
+mkdir -p "$LOCAL_CACHE" "$ROOT_DIR/.build/module-cache"
 export XDG_CACHE_HOME="$LOCAL_CACHE"
 export CLANG_MODULE_CACHE_PATH="$ROOT_DIR/.build/module-cache"
 

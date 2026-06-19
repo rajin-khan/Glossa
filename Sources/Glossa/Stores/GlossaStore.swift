@@ -34,6 +34,7 @@ final class GlossaStore: ObservableObject {
     @Published var permissions: CapturePermissionSnapshot = .unknown
     @Published var pipelineStats: SubtitlePipelineStats = .idle
     @Published var transcriptionStatus: TranscriptionStatus = .idle
+    @Published var localModelStatus: LocalModelStatus = .notPrepared
 
     let translationBroker = TranslationRequestBroker()
 
@@ -147,6 +148,14 @@ final class GlossaStore: ObservableObject {
         permissions = await permissionService.requestMicrophone()
     }
 
+    func prepareLocalModel() {
+        guard let modelManager = transcriptionService as? LocalModelManaging else {
+            localModelStatus = .unavailable
+            return
+        }
+        modelManager.prepareModel()
+    }
+
     private func startCapture() {
         listeningState = .starting
         transcriptionStatus = transcriptionService.start(targetLanguage: targetLanguage)
@@ -254,6 +263,13 @@ final class GlossaStore: ObservableObject {
     }
 
     private func attachTranscriptionHandlers() {
+        if let modelManager = transcriptionService as? LocalModelManaging {
+            modelManager.setModelStatusHandler { [weak self] status in
+                self?.localModelStatus = status
+            }
+        } else {
+            localModelStatus = .unavailable
+        }
         transcriptionService.setStatusHandler { [weak self] status in
             self?.transcriptionStatus = status
         }

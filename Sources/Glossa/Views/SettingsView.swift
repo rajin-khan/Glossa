@@ -27,6 +27,10 @@ struct SettingsView: View {
                 Text(store.transcriptionProvider.detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                if store.transcriptionProvider == .whisperKit {
+                    LocalModelPreparationView(store: store)
+                }
             }
 
             Section("Privacy") {

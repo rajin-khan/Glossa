@@ -8,7 +8,8 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "Glossa", targets: ["Glossa"])
+        .executable(name: "Glossa", targets: ["Glossa"]),
+        .executable(name: "GlossaModelPrep", targets: ["GlossaModelPrep"])
     ],
     dependencies: [
         .package(
@@ -26,6 +27,12 @@ let package = Package(
         .testTarget(
             name: "GlossaTests",
             dependencies: ["Glossa"]
+        ),
+        .executableTarget(
+            name: "GlossaModelPrep",
+            dependencies: [
+                .product(name: "WhisperKit", package: "argmax-oss-swift")
+            ]
         )
     ]
 )

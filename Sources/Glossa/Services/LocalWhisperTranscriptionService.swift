@@ -2,17 +2,18 @@ import Foundation
 import WhisperKit
 
 @MainActor
-final class LocalWhisperTranscriptionService: TranscriptionServing {
+final class LocalWhisperTranscriptionService: TranscriptionServing, LocalModelManaging {
     private let providerName = "WhisperKit"
     private let modelName: String
     private let maximumPendingChunks = 3
 
     private var whisperKit: WhisperKit?
-    private var initializationTask: Task<Void, Never>?
+    private var modelPreparationTask: Task<Void, Never>?
     private var transcriptionTask: Task<Void, Never>?
     private var pendingChunks: [AudioChunk] = []
     private var transcriptHandler: (@MainActor @Sendable (TranscriptionEvent) -> Void)?
     private var statusHandler: (@MainActor @Sendable (TranscriptionStatus) -> Void)?
+    private var modelStatusHandler: (@MainActor @Sendable (LocalModelStatus) -> Void)?
     private var isRunning = false
     private var chunkCount = 0
     private var runID = UUID()
@@ -29,11 +30,25 @@ final class LocalWhisperTranscriptionService: TranscriptionServing {
         statusHandler = handler
     }
 
+    func setModelStatusHandler(_ handler: (@MainActor @Sendable (LocalModelStatus) -> Void)?) {
+        modelStatusHandler = handler
+        if whisperKit != nil {
+            handler?(.ready(model: modelName))
+        } else if LocalModelDirectory.cachedModelFolder(modelName: modelName) != nil {
+            handler?(.downloaded(model: modelName))
+        } else {
+            handler?(.notPrepared)
+        }
+    }
+
+    func prepareModel() {
+        beginModelPreparation()
+    }
+
     func start(targetLanguage: TranslationLanguage) -> TranscriptionStatus {
         _ = stop()
         isRunning = true
         runID = UUID()
-        let currentRunID = runID
 
         if whisperKit != nil {
             let status = TranscriptionStatus.ready(provider: providerName)
@@ -43,32 +58,55 @@ final class LocalWhisperTranscriptionService: TranscriptionServing {
 
         let status = TranscriptionStatus.loading(provider: providerName, detail: "loading \(modelName) model")
         statusHandler?(status)
-        initializationTask = Task { [weak self] in
+        beginModelPreparation()
+
+        return status
+    }
+
+    private func beginModelPreparation() {
+        guard whisperKit == nil, modelPreparationTask == nil else { return }
+
+        modelStatusHandler?(.downloading(progress: 0))
+        modelPreparationTask = Task { [weak self] in
             guard let self else { return }
 
             do {
+                let downloadBase = try LocalModelDirectory.url()
+                let modelFolder = try await WhisperKit.download(
+                    variant: modelName,
+                    downloadBase: downloadBase
+                ) { progress in
+                    let fraction = progress.fractionCompleted
+                    Task { @MainActor [weak self] in
+                        self?.modelStatusHandler?(.downloading(progress: fraction))
+                    }
+                }
+                self.modelStatusHandler?(.loading)
                 let config = WhisperKitConfig(
                     model: modelName,
+                    modelFolder: modelFolder.path,
                     verbose: false,
                     logLevel: .error,
                     prewarm: true,
                     load: true,
-                    download: true
+                    download: false
                 )
                 let engine = try await WhisperKit(config)
-                guard self.isRunning, self.runID == currentRunID else { return }
                 self.whisperKit = engine
-                self.statusHandler?(.ready(provider: self.providerName))
-                self.processNextChunk()
+                self.modelPreparationTask = nil
+                self.modelStatusHandler?(.ready(model: self.modelName))
+
+                if self.isRunning {
+                    self.statusHandler?(.ready(provider: self.providerName))
+                    self.processNextChunk()
+                }
             } catch {
-                guard self.runID == currentRunID else { return }
-                self.isRunning = false
+                self.modelPreparationTask = nil
                 self.pendingChunks.removeAll()
+                self.modelStatusHandler?(.failed(error.localizedDescription))
                 self.statusHandler?(.failed(error.localizedDescription))
             }
         }
-
-        return status
     }
 
     func receive(chunk: AudioChunk) -> TranscriptionStatus {
@@ -102,8 +140,6 @@ final class LocalWhisperTranscriptionService: TranscriptionServing {
         runID = UUID()
         chunkCount = 0
         pendingChunks.removeAll()
-        initializationTask?.cancel()
-        initializationTask = nil
         transcriptionTask?.cancel()
         transcriptionTask = nil
         statusHandler?(.stopped)

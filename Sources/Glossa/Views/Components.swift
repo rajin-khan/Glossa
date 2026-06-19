@@ -289,3 +289,51 @@ struct TranslationStatusView: View {
         }
     }
 }
+
+struct LocalModelPreparationView: View {
+    @ObservedObject var store: GlossaStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label("Local Speech Model", systemImage: "cpu")
+                    .font(.callout.weight(.semibold))
+                Spacer()
+                Text(store.localModelStatus.label)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(statusColor)
+                    .lineLimit(1)
+            }
+
+            if let progress = store.localModelStatus.progress {
+                ProgressView(value: progress)
+                    .progressViewStyle(.linear)
+            }
+
+            HStack {
+                Text("The tiny multilingual model is downloaded once and runs entirely on this Mac.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Prepare Model") {
+                    store.prepareLocalModel()
+                }
+                .disabled(!store.localModelStatus.canPrepare)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
+    private var statusColor: Color {
+        switch store.localModelStatus {
+        case .notPrepared, .downloaded, .unavailable:
+            .secondary
+        case .downloading, .loading:
+            .yellow
+        case .ready:
+            .teal
+        case .failed:
+            .red
+        }
+    }
+}
