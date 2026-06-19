@@ -70,6 +70,7 @@ struct MainPanelView: View {
                 .font(.callout)
                 .foregroundStyle(.tertiary)
             AudioLevelMeter(metrics: store.captureMetrics)
+            PipelineStatsView(stats: store.pipelineStats)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)

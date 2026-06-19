@@ -199,3 +199,29 @@ struct PermissionRow: View {
         }
     }
 }
+
+struct PipelineStatsView: View {
+    let stats: SubtitlePipelineStats
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Label("Pipeline", systemImage: "waveform.path")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+
+            Spacer()
+
+            Text(detailText)
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    private var detailText: String {
+        guard stats.lastUpdated != nil else {
+            return "waiting for frames"
+        }
+
+        return "\(stats.receivedFrameCount) frames · \(stats.bufferedAudioDuration.formatted(.number.precision(.fractionLength(1))))s buffered"
+    }
+}

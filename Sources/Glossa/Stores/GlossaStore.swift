@@ -9,6 +9,7 @@ final class GlossaStore: ObservableObject {
     @Published var overlayVisible = true
     @Published var captureMetrics: AudioCaptureMetrics = .idle
     @Published var permissions: CapturePermissionSnapshot = .unknown
+    @Published var pipelineStats: SubtitlePipelineStats = .idle
 
     private let captureService: AudioCaptureServing
     private let permissionService: CapturePermissionService
@@ -28,7 +29,8 @@ final class GlossaStore: ObservableObject {
             self.captureMetrics = next
         }
         captureService.setFrameHandler { [weak self] frame in
-            self?.subtitlePipeline.receive(frame: frame)
+            guard let self else { return }
+            self.pipelineStats = self.subtitlePipeline.receive(frame: frame)
         }
         recentSegments = [
             TranscriptSegment(
@@ -70,6 +72,7 @@ final class GlossaStore: ObservableObject {
             await captureService.stop()
         }
         subtitlePipeline.reset()
+        pipelineStats = .idle
         captureMetrics = .idle
         listeningState = .idle
         append(
@@ -165,6 +168,12 @@ final class GlossaStore: ObservableObject {
                     bufferCount: (self?.captureMetrics.bufferCount ?? 0) + 1,
                     sampleRate: 24_000,
                     channelCount: 1,
+                    lastUpdated: .now
+                )
+                self?.pipelineStats = SubtitlePipelineStats(
+                    receivedFrameCount: (self?.pipelineStats.receivedFrameCount ?? 0) + 1,
+                    bufferedAudioDuration: Double((index % 8) + 1) * 0.5,
+                    lastFrameDuration: 0.5,
                     lastUpdated: .now
                 )
                 index += 1
