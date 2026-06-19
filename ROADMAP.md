@@ -10,27 +10,30 @@
 
 ## Milestone 1: Audio Proof
 
-- Request macOS audio/screen capture permissions
-- Capture system audio buffers through ScreenCaptureKit
-- Show live input level and capture health
-- Add microphone fallback
+- [x] Request macOS audio/screen capture permissions
+- [x] Capture system audio buffers through ScreenCaptureKit
+- [x] Show live input level and capture health
+- [x] Add microphone fallback
 
 ## Milestone 2: Realtime Captions
 
-- Connect cloud ASR for first working realtime transcripts
-- Add partial/final transcript stabilization
-- Persist recent transcript segments
+- [x] Add PCM frames, speech gating, and ASR-sized audio chunks
+- [x] Add a transcription provider boundary
+- [x] Integrate WhisperKit as the free local default
+- [ ] Tune local model chunk size and transcript stabilization
+- [ ] Persist recent transcript segments
 
 ## Milestone 3: Translation
 
 - Target language picker
 - Phrase-level translation buffering
 - Bilingual overlay mode
-- Provider switcher for OpenAI, DeepL, and Apple Translation where available
+- Apple Translation provider where available
+- Optional downloadable local translation packs for unsupported languages
 
 ## Milestone 4: Local Mode
 
-- WhisperKit local transcription
+- [x] WhisperKit local transcription
 - Download/manage model packs
 - Battery/performance controls
 - Offline privacy mode

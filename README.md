@@ -2,7 +2,14 @@
 
 Glossa is a native macOS menu-bar app for live translated subtitles from system audio.
 
-The first milestone is the Mac shell: a polished SwiftUI window, menu-bar controls, a floating subtitle overlay, and service boundaries for system audio capture, transcription, and translation.
+The development stack is local-first and free to run:
+
+- ScreenCaptureKit and AVAudioEngine for system/microphone audio
+- WhisperKit with a local multilingual Whisper model for speech-to-text
+- Apple Translation on supported macOS versions for on-device translation
+- Optional bring-your-own-key cloud providers may be added later
+
+WhisperKit downloads the selected model on first use. The default development model is `tiny` so setup remains manageable while the realtime pipeline is being tuned.
 
 ## Run
 

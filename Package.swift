@@ -10,7 +10,18 @@ let package = Package(
     products: [
         .executable(name: "Glossa", targets: ["Glossa"])
     ],
+    dependencies: [
+        .package(
+            url: "https://github.com/argmaxinc/argmax-oss-swift.git",
+            exact: "1.0.0"
+        )
+    ],
     targets: [
-        .executableTarget(name: "Glossa")
+        .executableTarget(
+            name: "Glossa",
+            dependencies: [
+                .product(name: "WhisperKit", package: "argmax-oss-swift")
+            ]
+        )
     ]
 )

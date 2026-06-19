@@ -14,6 +14,19 @@ final class GlossaStore: ObservableObject {
         }
     }
 
+    @Published var transcriptionProvider: TranscriptionProviderKind = .whisperKit {
+        didSet {
+            defaults.set(transcriptionProvider.rawValue, forKey: DefaultsKey.transcriptionProvider)
+            guard oldValue != transcriptionProvider else { return }
+
+            if isListening {
+                stopListening()
+            }
+            transcriptionService = Self.makeTranscriptionService(for: transcriptionProvider)
+            attachTranscriptionHandlers()
+        }
+    }
+
     @Published var listeningState: ListeningState = .idle
     @Published var recentSegments: [TranscriptSegment] = []
     @Published var overlayVisible = true
@@ -24,7 +37,7 @@ final class GlossaStore: ObservableObject {
 
     private let captureService: AudioCaptureServing
     private let permissionService: CapturePermissionService
-    private let transcriptionService: TranscriptionServing
+    private var transcriptionService: TranscriptionServing
     private let subtitlePipeline = SubtitlePipeline()
     private let defaults: UserDefaults
     private var previewTask: Task<Void, Never>?
@@ -32,15 +45,19 @@ final class GlossaStore: ObservableObject {
     init(
         captureService: AudioCaptureServing = SystemAudioCaptureService(),
         permissionService: CapturePermissionService = CapturePermissionService(),
-        transcriptionService: TranscriptionServing = DebugTranscriptionService(),
+        transcriptionService: TranscriptionServing? = nil,
         defaults: UserDefaults = .standard
     ) {
         self.captureService = captureService
         self.permissionService = permissionService
-        self.transcriptionService = transcriptionService
         self.defaults = defaults
-        targetLanguage = Self.restoreTargetLanguage(from: defaults)
-        captureMode = Self.restoreCaptureMode(from: defaults)
+        let restoredTargetLanguage = Self.restoreTargetLanguage(from: defaults)
+        let restoredCaptureMode = Self.restoreCaptureMode(from: defaults)
+        let restoredProvider = Self.restoreTranscriptionProvider(from: defaults)
+        targetLanguage = restoredTargetLanguage
+        captureMode = restoredCaptureMode
+        self.transcriptionProvider = restoredProvider
+        self.transcriptionService = transcriptionService ?? Self.makeTranscriptionService(for: restoredProvider)
         captureService.setMetricsHandler { [weak self] metrics in
             guard let self else { return }
             var next = metrics
@@ -55,6 +72,7 @@ final class GlossaStore: ObservableObject {
             guard let self else { return }
             self.transcriptionStatus = self.transcriptionService.receive(chunk: chunk)
         }
+        attachTranscriptionHandlers()
         recentSegments = [
             TranscriptSegment(
                 sourceText: "Glossa is ready to listen.",
@@ -160,7 +178,7 @@ final class GlossaStore: ObservableObject {
 
     private func startPreview() {
         listeningState = .previewing
-        transcriptionStatus = transcriptionService.start(targetLanguage: targetLanguage)
+        transcriptionStatus = .ready(provider: "Preview")
         let samples = [
             TranscriptSegment(
                 sourceText: "Bonjour, bienvenue dans Glossa.",
@@ -229,6 +247,20 @@ final class GlossaStore: ObservableObject {
         }
     }
 
+    private func attachTranscriptionHandlers() {
+        transcriptionService.setStatusHandler { [weak self] status in
+            self?.transcriptionStatus = status
+        }
+        transcriptionService.setTranscriptHandler { [weak self] event in
+            self?.append(
+                source: event.text,
+                translation: event.text,
+                sourceLanguage: event.sourceLanguage,
+                isFinal: event.isFinal
+            )
+        }
+    }
+
     private static func restoreTargetLanguage(from defaults: UserDefaults) -> TranslationLanguage {
         guard let code = defaults.string(forKey: DefaultsKey.targetLanguageCode),
               let language = TranslationLanguage.supported.first(where: { $0.code == code })
@@ -248,9 +280,29 @@ final class GlossaStore: ObservableObject {
 
         return mode
     }
+
+    private static func restoreTranscriptionProvider(from defaults: UserDefaults) -> TranscriptionProviderKind {
+        guard let rawValue = defaults.string(forKey: DefaultsKey.transcriptionProvider),
+              let provider = TranscriptionProviderKind(rawValue: rawValue)
+        else {
+            return .whisperKit
+        }
+
+        return provider
+    }
+
+    private static func makeTranscriptionService(for provider: TranscriptionProviderKind) -> TranscriptionServing {
+        switch provider {
+        case .debug:
+            DebugTranscriptionService()
+        case .whisperKit:
+            LocalWhisperTranscriptionService(modelName: "tiny")
+        }
+    }
 }
 
 private enum DefaultsKey {
     static let targetLanguageCode = "targetLanguageCode"
     static let captureMode = "captureMode"
+    static let transcriptionProvider = "transcriptionProvider"
 }

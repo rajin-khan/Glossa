@@ -248,6 +248,8 @@ struct TranscriptionStatusView: View {
         switch status {
         case .idle, .stopped:
             .secondary.opacity(0.72)
+        case .loading:
+            .yellow
         case .ready, .receiving:
             .teal
         case .failed:
