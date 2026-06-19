@@ -2,6 +2,7 @@ import Foundation
 
 #if canImport(ScreenCaptureKit)
 import AudioToolbox
+import AVFoundation
 import CoreMedia
 import ScreenCaptureKit
 #endif
@@ -14,6 +15,7 @@ final class SystemAudioCaptureService: NSObject, AudioCaptureServing {
     #if canImport(ScreenCaptureKit)
     private let sampleQueue = DispatchQueue(label: "com.rajin.glossa.audio-samples")
     private var stream: SCStream?
+    private var audioEngine: AVAudioEngine?
     private var bufferCount = 0
     #endif
 
@@ -30,7 +32,7 @@ final class SystemAudioCaptureService: NSObject, AudioCaptureServing {
         case .systemAudio:
             try await startSystemAudio()
         case .microphone:
-            throw AudioCaptureError.microphoneNotImplemented
+            try startMicrophone()
         case .preview:
             throw AudioCaptureError.unsupportedMode
         }
@@ -38,6 +40,7 @@ final class SystemAudioCaptureService: NSObject, AudioCaptureServing {
 
     func stop() async {
         #if canImport(ScreenCaptureKit)
+        stopMicrophone()
         guard let stream else { return }
         self.stream = nil
         bufferCount = 0
@@ -74,6 +77,39 @@ final class SystemAudioCaptureService: NSObject, AudioCaptureServing {
         self.stream = stream
         #else
         throw AudioCaptureError.unsupportedMode
+        #endif
+    }
+
+    private func startMicrophone() throws {
+        #if canImport(ScreenCaptureKit)
+        stopMicrophone()
+
+        let engine = AVAudioEngine()
+        let inputNode = engine.inputNode
+        let format = inputNode.outputFormat(forBus: 0)
+        let telemetryRelay = telemetryRelay
+        let frameRelay = frameRelay
+
+        inputNode.installTap(onBus: 0, bufferSize: 2_048, format: format) { buffer, _ in
+            guard let analysis = MicrophoneBufferAnalyzer.analysis(from: buffer) else { return }
+            telemetryRelay.emit(analysis.metrics)
+            frameRelay.emit(analysis.frame)
+        }
+
+        engine.prepare()
+        try engine.start()
+        audioEngine = engine
+        #else
+        throw AudioCaptureError.unsupportedMode
+        #endif
+    }
+
+    private func stopMicrophone() {
+        #if canImport(ScreenCaptureKit)
+        guard let audioEngine else { return }
+        audioEngine.inputNode.removeTap(onBus: 0)
+        audioEngine.stop()
+        self.audioEngine = nil
         #endif
     }
 }
@@ -184,6 +220,66 @@ private enum AudioBufferAnalyzer {
         }
 
         return []
+    }
+
+    private static func levels(from samples: [Float]) -> (rms: Double, peak: Double) {
+        guard !samples.isEmpty else { return (0, 0) }
+
+        var sum = 0.0
+        var peak = 0.0
+
+        for sample in samples {
+            let magnitude = min(1, abs(Double(sample)))
+            sum += magnitude * magnitude
+            peak = max(peak, magnitude)
+        }
+
+        return (sqrt(sum / Double(samples.count)), peak)
+    }
+}
+
+private enum MicrophoneBufferAnalyzer {
+    struct Analysis {
+        var metrics: AudioCaptureMetrics
+        var frame: AudioFrame
+    }
+
+    static func analysis(from buffer: AVAudioPCMBuffer) -> Analysis? {
+        guard let channelData = buffer.floatChannelData else { return nil }
+
+        let frameLength = Int(buffer.frameLength)
+        let channelCount = max(1, Int(buffer.format.channelCount))
+        guard frameLength > 0 else { return nil }
+
+        var samples: [Float] = []
+        samples.reserveCapacity(frameLength)
+
+        for frameIndex in 0..<frameLength {
+            var mixedSample: Float = 0
+            for channelIndex in 0..<channelCount {
+                mixedSample += channelData[channelIndex][frameIndex]
+            }
+            samples.append(min(1, max(-1, mixedSample / Float(channelCount))))
+        }
+
+        let level = levels(from: samples)
+        let metrics = AudioCaptureMetrics(
+            level: level.rms,
+            peak: level.peak,
+            sampleCount: samples.count,
+            bufferCount: 1,
+            sampleRate: buffer.format.sampleRate,
+            channelCount: 1,
+            lastUpdated: .now
+        )
+        let frame = AudioFrame(
+            samples: samples,
+            sampleRate: buffer.format.sampleRate,
+            channelCount: 1,
+            capturedAt: .now
+        )
+
+        return Analysis(metrics: metrics, frame: frame)
     }
 
     private static func levels(from samples: [Float]) -> (rms: Double, peak: Double) {
