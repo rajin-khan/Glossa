@@ -12,6 +12,7 @@ final class GlossaStore: ObservableObject {
 
     private let captureService: AudioCaptureServing
     private let permissionService: CapturePermissionService
+    private let subtitlePipeline = SubtitlePipeline()
     private var previewTask: Task<Void, Never>?
 
     init(
@@ -25,6 +26,9 @@ final class GlossaStore: ObservableObject {
             var next = metrics
             next.bufferCount = self.captureMetrics.bufferCount + 1
             self.captureMetrics = next
+        }
+        captureService.setFrameHandler { [weak self] frame in
+            self?.subtitlePipeline.receive(frame: frame)
         }
         recentSegments = [
             TranscriptSegment(
@@ -65,6 +69,7 @@ final class GlossaStore: ObservableObject {
         Task {
             await captureService.stop()
         }
+        subtitlePipeline.reset()
         captureMetrics = .idle
         listeningState = .idle
         append(

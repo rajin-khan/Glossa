@@ -9,6 +9,7 @@ import ScreenCaptureKit
 @MainActor
 final class SystemAudioCaptureService: NSObject, AudioCaptureServing {
     private nonisolated let telemetryRelay = AudioCaptureTelemetryRelay()
+    private nonisolated let frameRelay = AudioFrameRelay()
 
     #if canImport(ScreenCaptureKit)
     private let sampleQueue = DispatchQueue(label: "com.rajin.glossa.audio-samples")
@@ -18,6 +19,10 @@ final class SystemAudioCaptureService: NSObject, AudioCaptureServing {
 
     func setMetricsHandler(_ handler: (@MainActor @Sendable (AudioCaptureMetrics) -> Void)?) {
         telemetryRelay.setHandler(handler)
+    }
+
+    func setFrameHandler(_ handler: (@MainActor @Sendable (AudioFrame) -> Void)?) {
+        frameRelay.setHandler(handler)
     }
 
     func start(mode: CaptureMode) async throws {
@@ -85,13 +90,19 @@ extension SystemAudioCaptureService: SCStreamDelegate, SCStreamOutput {
         of type: SCStreamOutputType
     ) {
         guard type == .audio, sampleBuffer.isValid else { return }
-        guard let metrics = AudioBufferAnalyzer.metrics(from: sampleBuffer) else { return }
-        telemetryRelay.emit(metrics)
+        guard let analysis = AudioBufferAnalyzer.analysis(from: sampleBuffer) else { return }
+        telemetryRelay.emit(analysis.metrics)
+        frameRelay.emit(analysis.frame)
     }
 }
 
 private enum AudioBufferAnalyzer {
-    static func metrics(from sampleBuffer: CMSampleBuffer) -> AudioCaptureMetrics? {
+    struct Analysis {
+        var metrics: AudioCaptureMetrics
+        var frame: AudioFrame
+    }
+
+    static func analysis(from sampleBuffer: CMSampleBuffer) -> Analysis? {
         guard let formatDescription = CMSampleBufferGetFormatDescription(sampleBuffer),
               let streamDescription = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription)?.pointee
         else {
@@ -124,13 +135,14 @@ private enum AudioBufferAnalyzer {
 
         let sampleCount = CMSampleBufferGetNumSamples(sampleBuffer)
         let byteCount = Int(audioBufferList.mBuffers.mDataByteSize)
-        let level = normalizedRMS(
+        let samples = normalizedSamples(
             data: data,
             byteCount: byteCount,
             streamDescription: streamDescription
         )
+        let level = levels(from: samples)
 
-        return AudioCaptureMetrics(
+        let metrics = AudioCaptureMetrics(
             level: level.rms,
             peak: level.peak,
             sampleCount: sampleCount,
@@ -139,13 +151,22 @@ private enum AudioBufferAnalyzer {
             channelCount: Int(streamDescription.mChannelsPerFrame),
             lastUpdated: .now
         )
+
+        let frame = AudioFrame(
+            samples: samples,
+            sampleRate: streamDescription.mSampleRate,
+            channelCount: Int(streamDescription.mChannelsPerFrame),
+            capturedAt: .now
+        )
+
+        return Analysis(metrics: metrics, frame: frame)
     }
 
-    private static func normalizedRMS(
+    private static func normalizedSamples(
         data: UnsafeMutableRawPointer,
         byteCount: Int,
         streamDescription: AudioStreamBasicDescription
-    ) -> (rms: Double, peak: Double) {
+    ) -> [Float] {
         let flags = streamDescription.mFormatFlags
         let isFloat = flags & kAudioFormatFlagIsFloat != 0
         let isSignedInteger = flags & kAudioFormatFlagIsSignedInteger != 0
@@ -153,36 +174,31 @@ private enum AudioBufferAnalyzer {
         if isFloat && streamDescription.mBitsPerChannel == 32 {
             let values = data.assumingMemoryBound(to: Float.self)
             let count = max(1, byteCount / MemoryLayout<Float>.size)
-            var sum = 0.0
-            var peak = 0.0
-
-            for index in 0..<count {
-                let value = Double(values[index])
-                let magnitude = min(1, abs(value))
-                sum += magnitude * magnitude
-                peak = max(peak, magnitude)
-            }
-
-            return (sqrt(sum / Double(count)), peak)
+            return (0..<count).map { min(1, max(-1, values[$0])) }
         }
 
         if isSignedInteger && streamDescription.mBitsPerChannel == 16 {
             let values = data.assumingMemoryBound(to: Int16.self)
             let count = max(1, byteCount / MemoryLayout<Int16>.size)
-            var sum = 0.0
-            var peak = 0.0
-
-            for index in 0..<count {
-                let value = Double(values[index]) / Double(Int16.max)
-                let magnitude = min(1, abs(value))
-                sum += magnitude * magnitude
-                peak = max(peak, magnitude)
-            }
-
-            return (sqrt(sum / Double(count)), peak)
+            return (0..<count).map { Float(values[$0]) / Float(Int16.max) }
         }
 
-        return (0, 0)
+        return []
+    }
+
+    private static func levels(from samples: [Float]) -> (rms: Double, peak: Double) {
+        guard !samples.isEmpty else { return (0, 0) }
+
+        var sum = 0.0
+        var peak = 0.0
+
+        for sample in samples {
+            let magnitude = min(1, abs(Double(sample)))
+            sum += magnitude * magnitude
+            peak = max(peak, magnitude)
+        }
+
+        return (sqrt(sum / Double(samples.count)), peak)
     }
 }
 #endif
