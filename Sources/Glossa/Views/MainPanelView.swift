@@ -2,170 +2,321 @@ import SwiftUI
 
 struct MainPanelView: View {
     @ObservedObject var store: GlossaStore
+    @State private var showsDiagnostics = false
 
     var body: some View {
         VStack(spacing: 0) {
-            header
+            sessionControls
+            Divider()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    statusPanel
-                    permissionPanel
-                    languagePanel
-                    subtitlePreview
-                    transcriptList
+                VStack(alignment: .leading, spacing: 22) {
+                    if needsActivePermission {
+                        activePermissionBanner
+                    }
+
+                    LiveSubtitleSurface(store: store)
+                    recentTranscript
+                    diagnostics
                 }
-                .padding(28)
+                .padding(24)
+                .frame(maxWidth: 900)
+                .frame(maxWidth: .infinity)
             }
         }
+        .navigationTitle("Live Subtitles")
         .toolbar {
             ToolbarItemGroup {
                 Button {
-                    store.clearTranscript()
+                    store.toggleOverlay()
                 } label: {
-                    Label("Clear", systemImage: "trash")
+                    Label(
+                        store.overlayVisible ? "Hide Overlay" : "Show Overlay",
+                        systemImage: store.overlayVisible ? "rectangle.slash" : "rectangle.on.rectangle"
+                    )
                 }
+                .help(store.overlayVisible ? "Hide subtitle overlay" : "Show subtitle overlay")
 
-                Button {
-                    store.toggleListening()
-                } label: {
-                    Label(store.isListening ? "Pause" : "Start", systemImage: store.isListening ? "pause.fill" : "play.fill")
+                SettingsLink {
+                    Label("Settings", systemImage: "gearshape")
                 }
-                .buttonStyle(.borderedProminent)
             }
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 12) {
-                Image(systemName: "captions.bubble.fill")
-                    .font(.system(size: 30, weight: .semibold))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.teal)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Glossa")
-                        .font(.system(size: 28, weight: .semibold, design: .rounded))
-                    Text("Live translated subtitles for whatever your Mac is playing.")
-                        .foregroundStyle(.secondary)
+    private var sessionControls: some View {
+        HStack(spacing: 14) {
+            Picker("Capture", selection: $store.captureMode) {
+                ForEach(CaptureMode.allCases) { mode in
+                    Label(mode.rawValue, systemImage: captureIcon(for: mode))
+                        .tag(mode)
                 }
-
-                Spacer()
-
-                ListeningBadge(state: store.listeningState)
             }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(maxWidth: 330)
+
+            Divider()
+                .frame(height: 22)
+
+            Picker("Translate to", selection: $store.targetLanguage) {
+                ForEach(TranslationLanguage.supported) { language in
+                    Text("\(language.name) · \(language.nativeName)")
+                        .tag(language)
+                }
+            }
+            .frame(width: 210)
+
+            Spacer()
+
+            ListeningBadge(state: store.listeningState)
+
+            Button {
+                store.toggleListening()
+            } label: {
+                Label(
+                    store.isListening ? "Pause" : "Start",
+                    systemImage: store.isListening ? "pause.fill" : "play.fill"
+                )
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .keyboardShortcut(.space, modifiers: [])
         }
-        .padding(28)
-        .background(.thinMaterial)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 14)
     }
 
-    private var statusPanel: some View {
+    private var recentTranscript: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(store.listeningState.label)
-                .font(.title2.weight(.semibold))
-            Text(store.listeningState.detail)
-                .foregroundStyle(.secondary)
-            Text(store.captureMode.subtitle)
-                .font(.callout)
-                .foregroundStyle(.tertiary)
-            AudioLevelMeter(metrics: store.captureMetrics)
-            PipelineStatsView(stats: store.pipelineStats)
-            TranscriptionStatusView(status: store.transcriptionStatus)
-            TranslationStatusView(status: store.translationBroker.status)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
-    }
-
-    private var languagePanel: some View {
-        HStack(spacing: 18) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Target Language")
+            HStack {
+                Text("Recent")
                     .font(.headline)
-                Text("Glossa auto-detects the source language and translates into this.")
-                    .font(.callout)
+                Spacer()
+                Text(lineCountLabel)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if store.recentSegments.isEmpty {
+                ContentUnavailableView(
+                    "No Transcript Yet",
+                    systemImage: "text.bubble",
+                    description: Text("Translated lines will collect here while Glossa listens.")
+                )
+                .frame(maxWidth: .infinity, minHeight: 150)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(store.recentSegments.suffix(4).reversed().enumerated()), id: \.element.id) { index, segment in
+                        TranscriptRow(segment: segment)
+                        if index < min(3, store.recentSegments.count - 1) {
+                            Divider()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var diagnostics: some View {
+        DisclosureGroup("Diagnostics", isExpanded: $showsDiagnostics) {
+            VStack(spacing: 10) {
+                AudioLevelMeter(metrics: store.captureMetrics)
+                PipelineStatsView(stats: store.pipelineStats)
+                TranscriptionStatusView(status: store.transcriptionStatus)
+                TranslationStatusView(status: store.translationBroker.status)
+            }
+            .padding(.top, 10)
+        }
+        .font(.callout)
+        .foregroundStyle(.secondary)
+    }
+
+    private var lineCountLabel: String {
+        let count = store.recentSegments.count
+        return "\(count) \(count == 1 ? "line" : "lines")"
+    }
+
+    private var needsActivePermission: Bool {
+        switch store.captureMode {
+        case .systemAudio:
+            !store.permissions.screenRecording.isReady
+        case .microphone:
+            !store.permissions.microphone.isReady
+        case .preview:
+            false
+        }
+    }
+
+    private var activePermissionBanner: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.yellow)
+                .font(.title3)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(permissionTitle)
+                    .font(.callout.weight(.semibold))
+                Text(permissionDetail)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             Spacer()
 
-            Picker("Target Language", selection: $store.targetLanguage) {
-                ForEach(TranslationLanguage.supported) { language in
-                    Text("\(language.name) · \(language.nativeName)").tag(language)
+            if store.captureMode == .systemAudio {
+                Button("Restart Glossa") {
+                    store.restartApplication()
+                }
+                .help("Apply a newly granted Screen & System Audio Recording permission")
+            }
+
+            Button("Grant Access") {
+                Task {
+                    if store.captureMode == .systemAudio {
+                        await store.requestScreenRecordingPermission()
+                    } else {
+                        await store.requestMicrophonePermission()
+                    }
                 }
             }
-            .labelsHidden()
-            .frame(width: 230)
         }
-        .padding(18)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .padding(14)
+        .background(.yellow.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(.yellow.opacity(0.24))
+        }
     }
 
-    private var permissionPanel: some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private var permissionTitle: String {
+        store.captureMode == .systemAudio ? "System audio access required" : "Microphone access required"
+    }
+
+    private var permissionDetail: String {
+        store.captureMode == .systemAudio
+            ? "Allow Glossa in Screen & System Audio Recording, then restart once."
+            : "Allow microphone access to use the fallback capture source."
+    }
+
+    private func captureIcon(for mode: CaptureMode) -> String {
+        switch mode {
+        case .systemAudio:
+            "speaker.wave.2"
+        case .microphone:
+            "mic"
+        case .preview:
+            "play.rectangle"
+        }
+    }
+}
+
+private struct LiveSubtitleSurface: View {
+    @ObservedObject var store: GlossaStore
+
+    var body: some View {
+        VStack(spacing: 18) {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Permissions")
-                        .font(.headline)
-                    Text("Glossa needs capture access before it can listen to system audio.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
+                Label(store.captureMode.rawValue, systemImage: captureIcon)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
 
                 Spacer()
 
-                HStack {
-                    Button("Refresh") {
-                        Task { await store.refreshPermissions() }
-                    }
-                    Button("Restart Glossa") {
-                        store.restartApplication()
-                    }
-                }
+                Text(store.targetLanguage.nativeName)
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(.quaternary, in: Capsule())
             }
 
-            PermissionRow(
-                title: "System Audio",
-                detail: "Uses macOS Screen Recording permission for ScreenCaptureKit audio.",
-                state: store.permissions.screenRecording,
-                actionTitle: "Request"
-            ) {
-                Task { await store.requestScreenRecordingPermission() }
+            Spacer(minLength: 8)
+
+            Text(translatedText)
+                .font(.system(size: 30, weight: .semibold, design: .rounded))
+                .multilineTextAlignment(.center)
+                .lineLimit(4)
+                .minimumScaleFactor(0.68)
+                .contentTransition(.numericText())
+
+            if let sourceText {
+                Text(sourceText)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
             }
 
-            PermissionRow(
-                title: "Microphone Fallback",
-                detail: "Used only when you switch capture mode to Microphone.",
-                state: store.permissions.microphone,
-                actionTitle: "Request"
-            ) {
-                Task { await store.requestMicrophonePermission() }
+            Spacer(minLength: 8)
+
+            HStack(spacing: 7) {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 7, height: 7)
+                Text(flowStatus)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
             }
         }
-        .padding(18)
+        .padding(24)
+        .frame(maxWidth: .infinity, minHeight: 260)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-    }
-
-    private var subtitlePreview: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Subtitle Overlay")
-                .font(.headline)
-
-            SubtitleCard(segment: store.currentSubtitle)
-                .frame(maxWidth: .infinity)
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(.separator.opacity(0.45))
         }
     }
 
-    private var transcriptList: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Recent Lines")
-                .font(.headline)
+    private var translatedText: String {
+        guard let segment = store.currentSubtitle else { return "Ready when you are" }
+        return segment.translatedText
+    }
 
-            ForEach(store.recentSegments.reversed()) { segment in
-                TranscriptRow(segment: segment)
-            }
+    private var sourceText: String? {
+        guard let segment = store.currentSubtitle,
+              segment.sourceText != segment.translatedText
+        else {
+            return nil
+        }
+        return segment.sourceText
+    }
+
+    private var flowStatus: String {
+        switch store.listeningState {
+        case .idle:
+            "Ready to listen"
+        case .starting:
+            "Preparing local models"
+        case .listening:
+            "Listening privately on this Mac"
+        case .previewing:
+            "Previewing subtitle motion"
+        case .failed(let message):
+            message
+        }
+    }
+
+    private var statusColor: Color {
+        switch store.listeningState {
+        case .idle:
+            .secondary
+        case .starting:
+            .yellow
+        case .listening, .previewing:
+            .teal
+        case .failed:
+            .red
+        }
+    }
+
+    private var captureIcon: String {
+        switch store.captureMode {
+        case .systemAudio:
+            "speaker.wave.2"
+        case .microphone:
+            "mic"
+        case .preview:
+            "play.rectangle"
         }
     }
 }

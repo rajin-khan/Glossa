@@ -8,13 +8,12 @@ struct GlossaApp: App {
     var body: some Scene {
         WindowGroup("Glossa", id: "main") {
             ContentView(store: store)
-                .frame(minWidth: 820, minHeight: 560)
+                .frame(minWidth: 860, minHeight: 580)
                 .onAppear {
                     appDelegate.configure(store: store)
                 }
         }
-        .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 920, height: 640)
+        .defaultSize(width: 960, height: 680)
         .commands {
             CommandGroup(replacing: .newItem) { }
             CommandMenu("Glossa") {

@@ -64,6 +64,7 @@ struct SubtitleCard: View {
 
 struct TranscriptRow: View {
     let segment: TranscriptSegment
+    var showsTimestamp = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
@@ -76,14 +77,17 @@ struct TranscriptRow: View {
             HStack {
                 Text(segment.sourceLanguage)
                 Spacer()
+                if showsTimestamp {
+                    Text(segment.createdAt, style: .time)
+                }
                 Text(segment.isFinal ? "Final" : "Live")
             }
             .font(.caption)
             .foregroundStyle(.tertiary)
         }
-        .padding(14)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.quaternary.opacity(0.34), in: RoundedRectangle(cornerRadius: 8))
     }
 }
 
@@ -107,7 +111,7 @@ struct AudioLevelMeter: View {
                     Capsule()
                         .fill(.secondary.opacity(0.16))
                     Capsule()
-                        .fill(levelGradient)
+                        .fill(.teal)
                         .frame(width: max(6, proxy.size.width * CGFloat(clamped(metrics.level))))
                     Capsule()
                         .fill(.white.opacity(0.72))
@@ -123,14 +127,6 @@ struct AudioLevelMeter: View {
         guard metrics.lastUpdated != nil else { return "no signal" }
         let rate = metrics.sampleRate > 0 ? "\(Int(metrics.sampleRate / 1_000)) kHz" : "--"
         return "\(Int(metrics.level * 100))% · \(rate) · \(metrics.channelCount) ch"
-    }
-
-    private var levelGradient: LinearGradient {
-        LinearGradient(
-            colors: [.teal, .green, .yellow],
-            startPoint: .leading,
-            endPoint: .trailing
-        )
     }
 
     private func clamped(_ value: Double) -> Double {

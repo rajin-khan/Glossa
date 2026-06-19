@@ -30,7 +30,7 @@ final class GlossaStore: ObservableObject {
 
     @Published var listeningState: ListeningState = .idle
     @Published var recentSegments: [TranscriptSegment] = []
-    @Published var overlayVisible = true
+    @Published var overlayVisible = false
     @Published var captureMetrics: AudioCaptureMetrics = .idle
     @Published var permissions: CapturePermissionSnapshot = .unknown
     @Published var pipelineStats: SubtitlePipelineStats = .idle
@@ -46,6 +46,7 @@ final class GlossaStore: ObservableObject {
     private let defaults: UserDefaults
     private var previewTask: Task<Void, Never>?
     private var hasLoggedAudioFlow = false
+    private var overlayVisibilityHandler: ((Bool) -> Void)?
 
     init(
         captureService: AudioCaptureServing = SystemAudioCaptureService(),
@@ -87,14 +88,7 @@ final class GlossaStore: ObservableObject {
         translationBroker.setResultHandler { [weak self] segment in
             self?.append(segment: segment)
         }
-        recentSegments = [
-            TranscriptSegment(
-                sourceText: "Glossa is ready to listen.",
-                translatedText: "Choose a target language, then start subtitles.",
-                sourceLanguage: "Auto",
-                isFinal: true
-            )
-        ]
+        recentSegments = []
     }
 
     var isListening: Bool {
@@ -111,6 +105,8 @@ final class GlossaStore: ObservableObject {
 
     func startListening() {
         previewTask?.cancel()
+        overlayVisible = true
+        overlayVisibilityHandler?(true)
         GlossaLog.app.info(
             "Starting listening with capture=\(self.captureMode.rawValue, privacy: .public) provider=\(self.transcriptionProvider.rawValue, privacy: .public)"
         )
@@ -137,16 +133,21 @@ final class GlossaStore: ObservableObject {
         captureMetrics = .idle
         hasLoggedAudioFlow = false
         listeningState = .idle
-        append(
-            source: "Listening paused.",
-            translation: "Glossa is standing by.",
-            sourceLanguage: "System",
-            isFinal: true
-        )
+        overlayVisible = false
+        overlayVisibilityHandler?(false)
     }
 
     func clearTranscript() {
         recentSegments.removeAll()
+    }
+
+    func setOverlayVisibilityHandler(_ handler: @escaping (Bool) -> Void) {
+        overlayVisibilityHandler = handler
+    }
+
+    func toggleOverlay() {
+        overlayVisible.toggle()
+        overlayVisibilityHandler?(overlayVisible)
     }
 
     func refreshPermissions() async {
@@ -225,22 +226,12 @@ final class GlossaStore: ObservableObject {
                 try await captureService.start(mode: captureMode)
                 listeningState = .listening
                 GlossaLog.capture.info("Capture started successfully")
-                append(
-                    source: "\(captureMode.rawValue) capture started.",
-                    translation: "Audio is flowing. Realtime transcription comes next.",
-                    sourceLanguage: "System",
-                    isFinal: true
-                )
             } catch {
                 GlossaLog.capture.error("Capture failed: \(error.localizedDescription, privacy: .public)")
                 transcriptionStatus = transcriptionService.stop()
                 listeningState = .failed(error.localizedDescription)
-                append(
-                    source: "Capture could not start.",
-                    translation: error.localizedDescription,
-                    sourceLanguage: "System",
-                    isFinal: true
-                )
+                overlayVisible = false
+                overlayVisibilityHandler?(false)
             }
         }
     }
@@ -296,17 +287,6 @@ final class GlossaStore: ObservableObject {
                 index += 1
             }
         }
-    }
-
-    private func append(source: String, translation: String, sourceLanguage: String, isFinal: Bool) {
-        append(
-            segment: TranscriptSegment(
-                sourceText: source,
-                translatedText: translation,
-                sourceLanguage: sourceLanguage,
-                isFinal: isFinal
-            )
-        )
     }
 
     private func append(segment: TranscriptSegment) {

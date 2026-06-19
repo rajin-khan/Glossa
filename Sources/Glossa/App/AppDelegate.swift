@@ -15,5 +15,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     func configure(store: GlossaStore) {
         overlayController.configure(store: store)
+        store.setOverlayVisibilityHandler { [weak overlayController] isVisible in
+            if isVisible {
+                overlayController?.show()
+            } else {
+                overlayController?.hide()
+            }
+        }
     }
 }

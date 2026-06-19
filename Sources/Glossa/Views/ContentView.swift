@@ -3,14 +3,19 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var store: GlossaStore
+    @State private var selection: WorkspaceSection? = .live
 
     var body: some View {
         NavigationSplitView {
-            SidebarView(store: store)
+            SidebarView(selection: $selection, store: store)
         } detail: {
-            MainPanelView(store: store)
+            switch selection ?? .live {
+            case .live:
+                MainPanelView(store: store)
+            case .transcript:
+                TranscriptHistoryView(store: store)
+            }
         }
-        .background(.regularMaterial)
         .overlay(alignment: .topLeading) {
             if #available(macOS 15.0, *) {
                 AppleTranslationHostView(broker: store.translationBroker)

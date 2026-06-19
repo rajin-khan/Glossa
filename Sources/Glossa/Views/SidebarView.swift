@@ -1,40 +1,34 @@
 import SwiftUI
 
 struct SidebarView: View {
+    @Binding var selection: WorkspaceSection?
     @ObservedObject var store: GlossaStore
 
     var body: some View {
-        List {
+        List(selection: $selection) {
             Section {
-                Label("Live Subtitles", systemImage: "captions.bubble")
-                Label("Languages", systemImage: "globe")
-                Label("Privacy", systemImage: "lock.shield")
-            }
-
-            Section("Capture") {
-                ForEach(CaptureMode.allCases) { mode in
-                    Button {
-                        store.captureMode = mode
-                    } label: {
-                        Label(mode.rawValue, systemImage: icon(for: mode))
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(store.captureMode == mode ? .primary : .secondary)
+                ForEach(WorkspaceSection.allCases) { section in
+                    Label(section.rawValue, systemImage: section.icon)
+                        .tag(section)
                 }
             }
         }
         .listStyle(.sidebar)
         .navigationTitle("Glossa")
-    }
-
-    private func icon(for mode: CaptureMode) -> String {
-        switch mode {
-        case .systemAudio:
-            "speaker.wave.2"
-        case .microphone:
-            "mic"
-        case .preview:
-            "play.rectangle"
+        .safeAreaInset(edge: .bottom) {
+            HStack(spacing: 8) {
+                Image(systemName: "lock.fill")
+                    .foregroundStyle(.teal)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Local & Private")
+                        .font(.caption.weight(.semibold))
+                    Text("Audio is never stored")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(12)
         }
     }
 }
