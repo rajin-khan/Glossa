@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 @MainActor
@@ -44,6 +45,7 @@ final class GlossaStore: ObservableObject {
     private let subtitlePipeline = SubtitlePipeline()
     private let defaults: UserDefaults
     private var previewTask: Task<Void, Never>?
+    private var hasLoggedAudioFlow = false
 
     init(
         captureService: AudioCaptureServing = SystemAudioCaptureService(),
@@ -63,6 +65,12 @@ final class GlossaStore: ObservableObject {
         self.transcriptionService = transcriptionService ?? Self.makeTranscriptionService(for: restoredProvider)
         captureService.setMetricsHandler { [weak self] metrics in
             guard let self else { return }
+            if metrics.lastUpdated != nil, !self.hasLoggedAudioFlow {
+                self.hasLoggedAudioFlow = true
+                GlossaLog.capture.info(
+                    "Received first audio buffer at \(metrics.sampleRate, privacy: .public) Hz"
+                )
+            }
             var next = metrics
             next.bufferCount = self.captureMetrics.bufferCount + 1
             self.captureMetrics = next
@@ -103,6 +111,9 @@ final class GlossaStore: ObservableObject {
 
     func startListening() {
         previewTask?.cancel()
+        GlossaLog.app.info(
+            "Starting listening with capture=\(self.captureMode.rawValue, privacy: .public) provider=\(self.transcriptionProvider.rawValue, privacy: .public)"
+        )
 
         switch captureMode {
         case .preview:
@@ -113,6 +124,7 @@ final class GlossaStore: ObservableObject {
     }
 
     func stopListening() {
+        GlossaLog.app.info("Stopping listening")
         previewTask?.cancel()
         previewTask = nil
         Task {
@@ -123,6 +135,7 @@ final class GlossaStore: ObservableObject {
         translationBroker.reset()
         pipelineStats = .idle
         captureMetrics = .idle
+        hasLoggedAudioFlow = false
         listeningState = .idle
         append(
             source: "Listening paused.",
@@ -156,6 +169,37 @@ final class GlossaStore: ObservableObject {
         modelManager.prepareModel()
     }
 
+    func restartApplication() {
+        let bundleURL = Bundle.main.bundleURL
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.createsNewApplicationInstance = true
+        GlossaLog.app.info("Restarting Glossa for refreshed privacy permissions")
+
+        NSWorkspace.shared.openApplication(at: bundleURL, configuration: configuration) { _, error in
+            if let error {
+                GlossaLog.app.error("Restart failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            NSApp.terminate(nil)
+        }
+    }
+
+    func handleLaunchArguments(_ arguments: [String]) {
+        guard !isListening else { return }
+
+        if arguments.contains("--smoke-microphone") {
+            GlossaLog.app.info("Applying microphone smoke-test launch argument")
+            captureMode = .microphone
+            startListening()
+        } else if arguments.contains("--smoke-system-audio") {
+            GlossaLog.app.info("Applying system-audio smoke-test launch argument")
+            captureMode = .systemAudio
+            startListening()
+        }
+    }
+
     private func startCapture() {
         listeningState = .starting
         transcriptionStatus = transcriptionService.start(targetLanguage: targetLanguage)
@@ -164,14 +208,23 @@ final class GlossaStore: ObservableObject {
             do {
                 await refreshPermissions()
                 if captureMode == .systemAudio && !permissions.screenRecording.isReady {
-                    throw AudioCaptureError.screenRecordingPermissionRequired
+                    GlossaLog.capture.info("Requesting Screen Recording permission")
+                    await requestScreenRecordingPermission()
+                    if !permissions.screenRecording.isReady {
+                        throw AudioCaptureError.screenRecordingPermissionRequired
+                    }
                 }
                 if captureMode == .microphone && !permissions.microphone.isReady {
-                    throw AudioCaptureError.microphonePermissionRequired
+                    GlossaLog.capture.info("Requesting microphone permission")
+                    await requestMicrophonePermission()
+                    if !permissions.microphone.isReady {
+                        throw AudioCaptureError.microphonePermissionRequired
+                    }
                 }
 
                 try await captureService.start(mode: captureMode)
                 listeningState = .listening
+                GlossaLog.capture.info("Capture started successfully")
                 append(
                     source: "\(captureMode.rawValue) capture started.",
                     translation: "Audio is flowing. Realtime transcription comes next.",
@@ -179,6 +232,7 @@ final class GlossaStore: ObservableObject {
                     isFinal: true
                 )
             } catch {
+                GlossaLog.capture.error("Capture failed: \(error.localizedDescription, privacy: .public)")
                 transcriptionStatus = transcriptionService.stop()
                 listeningState = .failed(error.localizedDescription)
                 append(

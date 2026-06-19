@@ -2,6 +2,7 @@
 set -euo pipefail
 
 MODE="${1:-run}"
+LAUNCH_ARGS=("${@:2}")
 APP_NAME="Glossa"
 BUNDLE_ID="com.rajin.glossa"
 MIN_SYSTEM_VERSION="14.0"
@@ -54,8 +55,20 @@ cat >"$INFO_PLIST" <<PLIST
 </plist>
 PLIST
 
+/usr/bin/codesign \
+  --force \
+  --deep \
+  --sign - \
+  --identifier "$BUNDLE_ID" \
+  --requirements "=designated => identifier \"$BUNDLE_ID\"" \
+  "$APP_BUNDLE"
+
 open_app() {
-  /usr/bin/open -n "$APP_BUNDLE"
+  if [[ ${#LAUNCH_ARGS[@]} -gt 0 ]]; then
+    /usr/bin/open -n "$APP_BUNDLE" --args "${LAUNCH_ARGS[@]}"
+  else
+    /usr/bin/open -n "$APP_BUNDLE"
+  fi
 }
 
 case "$MODE" in

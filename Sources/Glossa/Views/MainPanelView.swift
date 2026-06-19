@@ -116,8 +116,13 @@ struct MainPanelView: View {
 
                 Spacer()
 
-                Button("Refresh") {
-                    Task { await store.refreshPermissions() }
+                HStack {
+                    Button("Refresh") {
+                        Task { await store.refreshPermissions() }
+                    }
+                    Button("Restart Glossa") {
+                        store.restartApplication()
+                    }
                 }
             }
 

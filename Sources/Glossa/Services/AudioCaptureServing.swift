@@ -22,7 +22,7 @@ enum AudioCaptureError: LocalizedError {
         case .noShareableDisplay:
             "Glossa could not find a display for ScreenCaptureKit audio capture."
         case .screenRecordingPermissionRequired:
-            "System audio capture needs Screen Recording permission. Grant it in the permission panel, then start listening again."
+            "Enable Glossa in Screen & System Audio Recording, then restart Glossa and start listening again."
         case .microphonePermissionRequired:
             "Microphone capture needs microphone permission. Grant it in the permission panel, then start listening again."
         case .unsupportedMode:

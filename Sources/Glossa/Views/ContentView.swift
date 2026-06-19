@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct ContentView: View {
@@ -17,8 +18,14 @@ struct ContentView: View {
         }
         .task {
             await store.refreshPermissions()
+            store.handleLaunchArguments(ProcessInfo.processInfo.arguments)
             if #unavailable(macOS 15.0) {
                 store.translationBroker.markUnavailable("Translation requires macOS 15")
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task {
+                await store.refreshPermissions()
             }
         }
     }

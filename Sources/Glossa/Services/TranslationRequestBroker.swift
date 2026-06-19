@@ -67,6 +67,9 @@ final class TranslationRequestBroker: ObservableObject {
                 isFinal: request.isFinal
             )
         )
+        GlossaLog.translation.info(
+            "Completed translation target=\(request.targetLanguageCode, privacy: .public) characters=\(translatedText.count, privacy: .public)"
+        )
         currentRequest = nil
         status = .ready
         advanceIfNeeded()
@@ -85,6 +88,7 @@ final class TranslationRequestBroker: ObservableObject {
         )
         currentRequest = nil
         status = .failed(message)
+        GlossaLog.translation.error("Translation failed: \(message, privacy: .public)")
         advanceIfNeeded()
     }
 

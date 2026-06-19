@@ -51,6 +51,7 @@ final class SystemAudioCaptureService: NSObject, AudioCaptureServing {
 
     private func startSystemAudio() async throws {
         #if canImport(ScreenCaptureKit)
+        GlossaLog.capture.info("Starting ScreenCaptureKit system audio")
         let content = try await SCShareableContent.excludingDesktopWindows(
             false,
             onScreenWindowsOnly: true
@@ -82,6 +83,7 @@ final class SystemAudioCaptureService: NSObject, AudioCaptureServing {
 
     private func startMicrophone() throws {
         #if canImport(ScreenCaptureKit)
+        GlossaLog.capture.info("Starting AVAudioEngine microphone capture")
         stopMicrophone()
 
         let engine = AVAudioEngine()
@@ -89,9 +91,19 @@ final class SystemAudioCaptureService: NSObject, AudioCaptureServing {
         let format = inputNode.outputFormat(forBus: 0)
         let telemetryRelay = telemetryRelay
         let frameRelay = frameRelay
+        let tapProbe = AudioTapProbe()
+
+        GlossaLog.capture.info(
+            "Microphone input format rate=\(format.sampleRate, privacy: .public) channels=\(format.channelCount, privacy: .public)"
+        )
 
         inputNode.installTap(onBus: 0, bufferSize: 2_048, format: format) { buffer, _ in
-            guard let analysis = MicrophoneBufferAnalyzer.analysis(from: buffer) else { return }
+            let analysis = MicrophoneBufferAnalyzer.analysis(from: buffer)
+            tapProbe.recordFirstBuffer(
+                frameLength: Int(buffer.frameLength),
+                hasAnalysis: analysis != nil
+            )
+            guard let analysis else { return }
             telemetryRelay.emit(analysis.metrics)
             frameRelay.emit(analysis.frame)
         }
@@ -117,7 +129,7 @@ final class SystemAudioCaptureService: NSObject, AudioCaptureServing {
 #if canImport(ScreenCaptureKit)
 extension SystemAudioCaptureService: SCStreamDelegate, SCStreamOutput {
     nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
-        // The store will surface active start failures; runtime failures get telemetry next.
+        GlossaLog.capture.error("ScreenCaptureKit stopped: \(error.localizedDescription, privacy: .public)")
     }
 
     nonisolated func stream(
@@ -295,6 +307,25 @@ private enum MicrophoneBufferAnalyzer {
         }
 
         return (sqrt(sum / Double(samples.count)), peak)
+    }
+}
+
+private final class AudioTapProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var hasLogged = false
+
+    func recordFirstBuffer(frameLength: Int, hasAnalysis: Bool) {
+        lock.lock()
+        guard !hasLogged else {
+            lock.unlock()
+            return
+        }
+        hasLogged = true
+        lock.unlock()
+
+        GlossaLog.capture.info(
+            "Received first microphone tap buffer frames=\(frameLength, privacy: .public) analyzed=\(hasAnalysis, privacy: .public)"
+        )
     }
 }
 #endif

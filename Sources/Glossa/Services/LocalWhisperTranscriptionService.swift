@@ -66,6 +66,7 @@ final class LocalWhisperTranscriptionService: TranscriptionServing, LocalModelMa
     private func beginModelPreparation() {
         guard whisperKit == nil, modelPreparationTask == nil else { return }
 
+        GlossaLog.transcription.info("Preparing local Whisper model: \(self.modelName, privacy: .public)")
         modelStatusHandler?(.downloading(progress: 0))
         modelPreparationTask = Task { [weak self] in
             guard let self else { return }
@@ -95,6 +96,7 @@ final class LocalWhisperTranscriptionService: TranscriptionServing, LocalModelMa
                 self.whisperKit = engine
                 self.modelPreparationTask = nil
                 self.modelStatusHandler?(.ready(model: self.modelName))
+                GlossaLog.transcription.info("Local Whisper model ready")
 
                 if self.isRunning {
                     self.statusHandler?(.ready(provider: self.providerName))
@@ -105,6 +107,9 @@ final class LocalWhisperTranscriptionService: TranscriptionServing, LocalModelMa
                 self.pendingChunks.removeAll()
                 self.modelStatusHandler?(.failed(error.localizedDescription))
                 self.statusHandler?(.failed(error.localizedDescription))
+                GlossaLog.transcription.error(
+                    "Local model preparation failed: \(error.localizedDescription, privacy: .public)"
+                )
             }
         }
     }
@@ -180,6 +185,9 @@ final class LocalWhisperTranscriptionService: TranscriptionServing, LocalModelMa
             if let result = results.first.flatMap({ $0 })?.first {
                 let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !text.isEmpty {
+                    GlossaLog.transcription.info(
+                        "Completed local transcription language=\(result.language, privacy: .public) characters=\(text.count, privacy: .public)"
+                    )
                     self.transcriptHandler?(
                         TranscriptionEvent(
                             text: text,
