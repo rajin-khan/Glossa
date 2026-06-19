@@ -86,3 +86,54 @@ struct TranscriptRow: View {
         .background(.quaternary.opacity(0.34), in: RoundedRectangle(cornerRadius: 8))
     }
 }
+
+struct AudioLevelMeter: View {
+    let metrics: AudioCaptureMetrics
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Input Level")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(detailText)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.tertiary)
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(.secondary.opacity(0.16))
+                    Capsule()
+                        .fill(levelGradient)
+                        .frame(width: max(6, proxy.size.width * CGFloat(clamped(metrics.level))))
+                    Capsule()
+                        .fill(.white.opacity(0.72))
+                        .frame(width: 2)
+                        .offset(x: max(0, proxy.size.width * CGFloat(clamped(metrics.peak)) - 1))
+                }
+            }
+            .frame(height: 10)
+        }
+    }
+
+    private var detailText: String {
+        guard metrics.lastUpdated != nil else { return "no signal" }
+        let rate = metrics.sampleRate > 0 ? "\(Int(metrics.sampleRate / 1_000)) kHz" : "--"
+        return "\(Int(metrics.level * 100))% · \(rate) · \(metrics.channelCount) ch"
+    }
+
+    private var levelGradient: LinearGradient {
+        LinearGradient(
+            colors: [.teal, .green, .yellow],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+
+    private func clamped(_ value: Double) -> Double {
+        min(1, max(0, value))
+    }
+}

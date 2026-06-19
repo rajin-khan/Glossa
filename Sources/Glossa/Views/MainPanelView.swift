@@ -68,6 +68,7 @@ struct MainPanelView: View {
             Text(store.captureMode.subtitle)
                 .font(.callout)
                 .foregroundStyle(.tertiary)
+            AudioLevelMeter(metrics: store.captureMetrics)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)

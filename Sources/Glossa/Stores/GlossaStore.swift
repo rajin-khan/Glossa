@@ -7,12 +7,19 @@ final class GlossaStore: ObservableObject {
     @Published var listeningState: ListeningState = .idle
     @Published var recentSegments: [TranscriptSegment] = []
     @Published var overlayVisible = true
+    @Published var captureMetrics: AudioCaptureMetrics = .idle
 
     private let captureService: AudioCaptureServing
     private var previewTask: Task<Void, Never>?
 
     init(captureService: AudioCaptureServing = SystemAudioCaptureService()) {
         self.captureService = captureService
+        captureService.setMetricsHandler { [weak self] metrics in
+            guard let self else { return }
+            var next = metrics
+            next.bufferCount = self.captureMetrics.bufferCount + 1
+            self.captureMetrics = next
+        }
         recentSegments = [
             TranscriptSegment(
                 sourceText: "Glossa is ready to listen.",
@@ -52,6 +59,7 @@ final class GlossaStore: ObservableObject {
         Task {
             await captureService.stop()
         }
+        captureMetrics = .idle
         listeningState = .idle
         append(
             source: "Listening paused.",
@@ -119,6 +127,15 @@ final class GlossaStore: ObservableObject {
                 try? await Task.sleep(for: .seconds(2))
                 guard !Task.isCancelled else { return }
                 self?.append(segment: samples[index % samples.count])
+                self?.captureMetrics = AudioCaptureMetrics(
+                    level: [0.16, 0.36, 0.68, 0.44][index % 4],
+                    peak: [0.32, 0.58, 0.88, 0.64][index % 4],
+                    sampleCount: 48_000,
+                    bufferCount: (self?.captureMetrics.bufferCount ?? 0) + 1,
+                    sampleRate: 24_000,
+                    channelCount: 1,
+                    lastUpdated: .now
+                )
                 index += 1
             }
         }

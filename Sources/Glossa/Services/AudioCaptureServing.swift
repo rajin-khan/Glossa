@@ -2,6 +2,7 @@ import Foundation
 
 @MainActor
 protocol AudioCaptureServing: AnyObject {
+    func setMetricsHandler(_ handler: (@MainActor @Sendable (AudioCaptureMetrics) -> Void)?)
     func start(mode: CaptureMode) async throws
     func stop() async
 }
