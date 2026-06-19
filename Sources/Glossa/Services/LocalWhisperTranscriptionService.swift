@@ -5,6 +5,7 @@ import WhisperKit
 final class LocalWhisperTranscriptionService: TranscriptionServing {
     private let providerName = "WhisperKit"
     private let modelName: String
+    private let maximumPendingChunks = 3
 
     private var whisperKit: WhisperKit?
     private var initializationTask: Task<Void, Never>?
@@ -75,6 +76,19 @@ final class LocalWhisperTranscriptionService: TranscriptionServing {
 
         chunkCount += 1
         pendingChunks.append(chunk)
+        if pendingChunks.count > maximumPendingChunks {
+            pendingChunks.removeFirst(pendingChunks.count - maximumPendingChunks)
+        }
+
+        guard whisperKit != nil else {
+            let status = TranscriptionStatus.loading(
+                provider: providerName,
+                detail: "loading model · \(pendingChunks.count) queued"
+            )
+            statusHandler?(status)
+            return status
+        }
+
         processNextChunk()
 
         let status = TranscriptionStatus.receiving(provider: providerName, chunkCount: chunkCount)

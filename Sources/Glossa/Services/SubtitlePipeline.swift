@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 final class SubtitlePipeline {
-    private let targetChunkDuration: TimeInterval = 1.0
+    private let targetChunkDuration: TimeInterval = 3.0
     private let silenceGate = 0.012
 
     private(set) var bufferedAudioDuration: TimeInterval = 0
