@@ -22,6 +22,10 @@ let package = Package(
             dependencies: [
                 .product(name: "WhisperKit", package: "argmax-oss-swift")
             ]
+        ),
+        .testTarget(
+            name: "GlossaTests",
+            dependencies: ["Glossa"]
         )
     ]
 )
