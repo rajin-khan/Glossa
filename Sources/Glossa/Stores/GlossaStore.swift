@@ -2,8 +2,18 @@ import Foundation
 
 @MainActor
 final class GlossaStore: ObservableObject {
-    @Published var targetLanguage: TranslationLanguage = TranslationLanguage.supported[0]
-    @Published var captureMode: CaptureMode = .systemAudio
+    @Published var targetLanguage: TranslationLanguage = TranslationLanguage.supported[0] {
+        didSet {
+            defaults.set(targetLanguage.code, forKey: DefaultsKey.targetLanguageCode)
+        }
+    }
+
+    @Published var captureMode: CaptureMode = .systemAudio {
+        didSet {
+            defaults.set(captureMode.rawValue, forKey: DefaultsKey.captureMode)
+        }
+    }
+
     @Published var listeningState: ListeningState = .idle
     @Published var recentSegments: [TranscriptSegment] = []
     @Published var overlayVisible = true
@@ -16,16 +26,21 @@ final class GlossaStore: ObservableObject {
     private let permissionService: CapturePermissionService
     private let transcriptionService: TranscriptionServing
     private let subtitlePipeline = SubtitlePipeline()
+    private let defaults: UserDefaults
     private var previewTask: Task<Void, Never>?
 
     init(
         captureService: AudioCaptureServing = SystemAudioCaptureService(),
         permissionService: CapturePermissionService = CapturePermissionService(),
-        transcriptionService: TranscriptionServing = DebugTranscriptionService()
+        transcriptionService: TranscriptionServing = DebugTranscriptionService(),
+        defaults: UserDefaults = .standard
     ) {
         self.captureService = captureService
         self.permissionService = permissionService
         self.transcriptionService = transcriptionService
+        self.defaults = defaults
+        targetLanguage = Self.restoreTargetLanguage(from: defaults)
+        captureMode = Self.restoreCaptureMode(from: defaults)
         captureService.setMetricsHandler { [weak self] metrics in
             guard let self else { return }
             var next = metrics
@@ -213,4 +228,29 @@ final class GlossaStore: ObservableObject {
             recentSegments.removeFirst(recentSegments.count - 12)
         }
     }
+
+    private static func restoreTargetLanguage(from defaults: UserDefaults) -> TranslationLanguage {
+        guard let code = defaults.string(forKey: DefaultsKey.targetLanguageCode),
+              let language = TranslationLanguage.supported.first(where: { $0.code == code })
+        else {
+            return TranslationLanguage.supported[0]
+        }
+
+        return language
+    }
+
+    private static func restoreCaptureMode(from defaults: UserDefaults) -> CaptureMode {
+        guard let rawValue = defaults.string(forKey: DefaultsKey.captureMode),
+              let mode = CaptureMode(rawValue: rawValue)
+        else {
+            return .systemAudio
+        }
+
+        return mode
+    }
+}
+
+private enum DefaultsKey {
+    static let targetLanguageCode = "targetLanguageCode"
+    static let captureMode = "captureMode"
 }
