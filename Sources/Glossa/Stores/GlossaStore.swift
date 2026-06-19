@@ -172,8 +172,11 @@ final class GlossaStore: ObservableObject {
                 )
                 self?.pipelineStats = SubtitlePipelineStats(
                     receivedFrameCount: (self?.pipelineStats.receivedFrameCount ?? 0) + 1,
+                    emittedChunkCount: (self?.pipelineStats.emittedChunkCount ?? 0) + (index.isMultiple(of: 2) ? 1 : 0),
                     bufferedAudioDuration: Double((index % 8) + 1) * 0.5,
                     lastFrameDuration: 0.5,
+                    lastFrameLevel: [0.16, 0.36, 0.68, 0.44][index % 4],
+                    isSpeechActive: true,
                     lastUpdated: .now
                 )
                 index += 1

@@ -222,6 +222,7 @@ struct PipelineStatsView: View {
             return "waiting for frames"
         }
 
-        return "\(stats.receivedFrameCount) frames · \(stats.bufferedAudioDuration.formatted(.number.precision(.fractionLength(1))))s buffered"
+        let speech = stats.isSpeechActive ? "speech" : "quiet"
+        return "\(stats.receivedFrameCount) frames · \(stats.emittedChunkCount) chunks · \(stats.bufferedAudioDuration.formatted(.number.precision(.fractionLength(1))))s · \(speech)"
     }
 }
