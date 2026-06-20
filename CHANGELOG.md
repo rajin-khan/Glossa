@@ -2,6 +2,16 @@
 
 All notable changes to Glossa are tracked here.
 
+## 0.1.5 - 2026-06-21
+
+### Fixed
+
+- Onboarding and Settings permission buttons now open the relevant macOS Privacy & Security panes instead of only making silent permission requests.
+
+### Verified
+
+- `swift test`
+
 ## 0.1.4 - 2026-06-21
 
 ### Added

@@ -15,9 +15,11 @@ struct OnboardingView: View {
                     detail: "System audio uses Screen & System Audio Recording. Microphone is only used when you choose it.",
                     actionTitle: "Open Permissions"
                 ) {
+                    store.openCapturePermissionSettings()
                     Task {
                         await store.requestScreenRecordingPermission()
                         await store.requestMicrophonePermission()
+                        await store.refreshPermissions()
                     }
                 }
 

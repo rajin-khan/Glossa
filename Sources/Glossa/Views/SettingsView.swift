@@ -229,6 +229,7 @@ private struct PrivacySettingsView: View {
                     title: "System Audio",
                     state: store.permissions.screenRecording
                 ) {
+                    store.openSystemAudioPermissionSettings()
                     Task { await store.requestScreenRecordingPermission() }
                 }
 
@@ -236,6 +237,7 @@ private struct PrivacySettingsView: View {
                     title: "Microphone",
                     state: store.permissions.microphone
                 ) {
+                    store.openMicrophonePermissionSettings()
                     Task { await store.requestMicrophonePermission() }
                 }
 

@@ -333,6 +333,21 @@ final class GlossaStore: ObservableObject {
         permissions = await permissionService.requestMicrophone()
     }
 
+    func openSystemAudioPermissionSettings() {
+        openSystemSettingsPane("x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
+    }
+
+    func openMicrophonePermissionSettings() {
+        openSystemSettingsPane("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
+    }
+
+    func openCapturePermissionSettings() {
+        openSystemAudioPermissionSettings()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
+            self?.openMicrophonePermissionSettings()
+        }
+    }
+
     func prepareLocalModel() {
         guard let modelManager = transcriptionService as? LocalModelManaging else {
             localModelStatus = .unavailable
@@ -595,6 +610,11 @@ final class GlossaStore: ObservableObject {
 
     private func notifyOverlayAppearanceChanged() {
         overlayAppearanceChangeHandler?()
+    }
+
+    private func openSystemSettingsPane(_ string: String) {
+        guard let url = URL(string: string) else { return }
+        NSWorkspace.shared.open(url)
     }
 
     private static func makeTranscriptionService(for provider: TranscriptionProviderKind) -> TranscriptionServing {
