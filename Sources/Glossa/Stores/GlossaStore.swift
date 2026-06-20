@@ -107,6 +107,7 @@ final class GlossaStore: ObservableObject {
     private let subtitlePipeline = SubtitlePipeline()
     private let defaults: UserDefaults
     private var previewTask: Task<Void, Never>?
+    private var activeSubtitleClearTask: Task<Void, Never>?
     private var hasLoggedAudioFlow = false
     private var overlayVisibilityHandler: ((Bool) -> Void)?
     private var overlayAppearanceChangeHandler: (() -> Void)?
@@ -235,6 +236,7 @@ final class GlossaStore: ObservableObject {
 
     func startListening() {
         previewTask?.cancel()
+        activeSubtitleClearTask?.cancel()
         overlayVisible = true
         overlayVisibilityHandler?(true)
         GlossaLog.app.info(
@@ -263,11 +265,11 @@ final class GlossaStore: ObservableObject {
         captureMetrics = .idle
         hasLoggedAudioFlow = false
         listeningState = .idle
-        activeSubtitle = nil
-        notifyOverlayAppearanceChanged()
+        retireActiveSubtitle(after: .seconds(2.8))
     }
 
     func clearTranscript() {
+        activeSubtitleClearTask?.cancel()
         recentSegments.removeAll()
         activeSubtitle = nil
         notifyOverlayAppearanceChanged()
@@ -420,8 +422,7 @@ final class GlossaStore: ObservableObject {
                 GlossaLog.capture.error("Capture failed: \(error.localizedDescription, privacy: .public)")
                 transcriptionStatus = transcriptionService.stop()
                 listeningState = .failed(error.localizedDescription)
-                activeSubtitle = nil
-                notifyOverlayAppearanceChanged()
+                retireActiveSubtitle(after: .seconds(2.8))
             }
         }
     }
@@ -480,12 +481,32 @@ final class GlossaStore: ObservableObject {
     }
 
     private func append(segment: TranscriptSegment) {
+        activeSubtitleClearTask?.cancel()
         activeSubtitle = segment
         recentSegments.append(segment)
         if recentSegments.count > 12 {
             recentSegments.removeFirst(recentSegments.count - 12)
         }
         notifyOverlayAppearanceChanged()
+        retireActiveSubtitle(after: .seconds(5.5), matching: segment.id)
+    }
+
+    private func retireActiveSubtitle(
+        after delay: Duration,
+        matching expectedID: UUID? = nil
+    ) {
+        activeSubtitleClearTask?.cancel()
+        activeSubtitleClearTask = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled, let self else { return }
+
+            if let expectedID, self.activeSubtitle?.id != expectedID {
+                return
+            }
+
+            self.activeSubtitle = nil
+            self.notifyOverlayAppearanceChanged()
+        }
     }
 
     private func attachTranscriptionHandlers() {

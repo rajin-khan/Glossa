@@ -8,9 +8,10 @@ struct SubtitleOverlayView: View {
             if let segment = store.currentSubtitle {
                 subtitle(segment)
                     .id(segment.id)
-                    .transition(.opacity.combined(with: .scale(scale: 0.982)))
+                    .transition(.opacity.combined(with: .scale(scale: 0.965)))
             } else {
                 listeningPlaceholder
+                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
             }
         }
         .padding(.horizontal, horizontalPadding)
@@ -24,8 +25,8 @@ struct SubtitleOverlayView: View {
         }
         .padding(8)
         .preferredColorScheme(.dark)
-        .animation(.snappy(duration: 0.2), value: store.currentSubtitle?.id)
-        .animation(.snappy(duration: 0.18), value: store.overlayScale)
+        .animation(.easeInOut(duration: 0.42), value: store.currentSubtitle?.id)
+        .animation(.easeInOut(duration: 0.36), value: store.overlayScale)
     }
 
     private func subtitle(_ segment: TranscriptSegment) -> some View {
@@ -107,7 +108,7 @@ private struct ShimmeringOverlayMark: View {
         .onAppear {
             guard !reduceMotion else { return }
             sheenPosition = -1
-            withAnimation(.linear(duration: 1.55).repeatForever(autoreverses: false)) {
+            withAnimation(.linear(duration: 2.15).repeatForever(autoreverses: false)) {
                 sheenPosition = 1
             }
         }
