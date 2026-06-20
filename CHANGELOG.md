@@ -13,6 +13,7 @@ All notable changes to Glossa are tracked here.
 ### Fixed
 
 - Serialized rapid capture stop/start operations so an older stop cannot tear down a newly started session.
+- Made the onboarding permission action reliably foreground the macOS Screen & System Audio Recording pane without competing permission prompts.
 
 ### Removed
 

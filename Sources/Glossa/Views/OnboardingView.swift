@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct OnboardingView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject var store: GlossaStore
     let finish: () -> Void
 
@@ -16,11 +17,6 @@ struct OnboardingView: View {
                     actionTitle: "Open Permissions"
                 ) {
                     store.openSystemAudioPermissionSettings()
-                    Task {
-                        await store.requestScreenRecordingPermission()
-                        await store.requestMicrophonePermission()
-                        await store.refreshPermissions()
-                    }
                 }
 
                 setupCard(
@@ -69,6 +65,10 @@ struct OnboardingView: View {
         }
         .padding(28)
         .frame(width: 720)
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await store.refreshPermissions() }
+        }
         .background {
             LinearGradient(
                 colors: [
