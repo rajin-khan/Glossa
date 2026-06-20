@@ -266,22 +266,65 @@ h3 {
   gap: 12px;
 }
 
+.apple-mark {
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.download-action {
+  gap: 10px;
+  min-height: 58px;
+  padding: 7px 18px;
+  border-radius: 16px;
+}
+
+.download-action .apple-mark {
+  color: #041214;
+  font-size: 24px;
+}
+
+.download-label {
+  display: grid;
+  text-align: left;
+}
+
+.download-label strong {
+  font-size: 15px;
+  font-weight: 720;
+  line-height: 1.1;
+}
+
+.download-label small {
+  margin: 3px 0 0;
+  color: rgba(4, 18, 20, 0.64);
+  font-size: 11px;
+  font-weight: 580;
+  line-height: 1.1;
+}
+
+.hero-actions .secondary-action {
+  min-height: 58px;
+}
+
 .hero-visual {
   position: relative;
-  min-height: 610px;
+  min-height: 680px;
 }
 
 .ambient-card {
   position: absolute;
-  top: 16px;
-  right: -18px;
+  top: -30px;
+  right: -116px;
+  left: auto;
   z-index: 6;
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 12px;
   align-items: center;
-  width: 184px;
-  padding: 11px;
+  width: 160px;
+  padding: 9px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   background:
@@ -292,7 +335,7 @@ h3 {
 }
 
 .ambient-card img {
-  width: 54px;
+  width: 44px;
   height: auto;
   border-radius: 22%;
 }
@@ -309,7 +352,7 @@ small,
 .ambient-card strong {
   display: block;
   margin-top: 3px;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 630;
   letter-spacing: -0.035em;
 }
@@ -330,10 +373,10 @@ small,
 
 .app-window {
   position: absolute;
-  top: 92px;
+  top: 42px;
   right: 0;
   left: 0;
-  overflow: hidden;
+  overflow: visible;
   border-radius: var(--radius-lg);
 }
 
@@ -384,6 +427,11 @@ small,
   font-weight: 620;
 }
 
+.stage-shell {
+  position: relative;
+  padding: 0;
+}
+
 .subtitle-stage {
   position: relative;
   display: grid;
@@ -419,9 +467,10 @@ small,
   justify-items: center;
   text-align: center;
   opacity: 0;
-  transform: translateY(22px) scale(0.985);
+  transform: translateY(14px) scale(0.99);
   animation: subtitle-cycle 17.5s infinite;
   animation-delay: calc(var(--i) * 3.5s);
+  animation-fill-mode: both;
 }
 
 .subtitle-line strong {
@@ -445,9 +494,10 @@ small,
 
 .menu-applet {
   position: absolute;
-  top: 500px;
+  top: auto;
   right: auto;
-  left: 18px;
+  bottom: -52px;
+  left: -145px;
   z-index: 7;
   width: 224px;
   padding: 14px;
@@ -463,6 +513,9 @@ small,
 .applet-head img {
   width: 34px;
   height: 34px;
+  object-fit: contain;
+  box-shadow: none;
+  opacity: 0.92;
 }
 
 .applet-head strong {
@@ -747,16 +800,21 @@ small,
 }
 
 @keyframes subtitle-cycle {
-  0%,
-  14% {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.99);
+  }
+
+  4%,
+  16% {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
 
-  22%,
+  20%,
   100% {
     opacity: 0;
-    transform: translateY(-20px) scale(0.99);
+    transform: translateY(-14px) scale(0.995);
   }
 }
 
@@ -808,6 +866,18 @@ small,
     min-height: 660px;
   }
 
+  .ambient-card {
+    top: -24px;
+    right: 18px;
+    left: auto;
+    width: 150px;
+  }
+
+  .menu-applet {
+    bottom: -54px;
+    left: 18px;
+  }
+
   .proof-strip,
   .language-panel,
   .privacy,
@@ -856,14 +926,35 @@ small,
   }
 
   .hero-visual {
-    width: 100%;
+    width: calc(100vw - 28px);
     max-width: calc(100vw - 28px);
+    min-width: 0;
     min-height: 0;
     overflow: visible;
   }
 
   .ambient-card {
+    top: 8px;
+    right: 10px;
+    left: auto;
+    grid-template-columns: auto 1fr;
+    gap: 7px;
+    width: 132px;
+    padding: 7px;
+    border-radius: 999px;
+  }
+
+  .ambient-card img {
+    width: 32px;
+  }
+
+  .ambient-card span {
     display: none;
+  }
+
+  .ambient-card strong {
+    margin: 0;
+    font-size: 14px;
   }
 
   .app-window {
@@ -873,10 +964,19 @@ small,
     left: auto;
     width: 100%;
     max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .window-body {
     padding: 12px;
+  }
+
+  .stage-shell {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0 0 42px;
   }
 
   .control-row {
@@ -905,21 +1005,63 @@ small,
   }
 
   .subtitle-stage {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     min-height: 252px;
   }
 
   .subtitle-line strong {
-    max-width: 12ch;
-    font-size: clamp(28px, 9.4vw, 38px);
+    width: min(100%, 10ch);
+    max-width: 10ch;
+    overflow-wrap: anywhere;
+    font-size: clamp(27px, 8.6vw, 34px);
   }
 
   .menu-applet {
-    position: relative;
+    position: absolute;
     top: auto;
-    right: auto;
-    left: 12px;
-    width: 210px;
-    margin-top: -18px;
+    right: 8px;
+    bottom: 0;
+    left: 8px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    width: auto;
+    max-width: calc(100% - 16px);
+    margin: 0;
+    padding: 10px;
+    border-radius: 18px;
+  }
+
+  .applet-head img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .applet-head strong {
+    font-size: 14px;
+  }
+
+  .applet-head span,
+  .meter {
+    display: none;
+  }
+
+  .applet-buttons {
+    grid-template-columns: repeat(2, 68px);
+    gap: 6px;
+  }
+
+  .applet-buttons button {
+    min-height: 32px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
+  .download-action {
+    min-height: 58px;
   }
 
   .proof-strip {
@@ -946,5 +1088,34 @@ small,
   .language-panel,
   .privacy {
     padding: 26px;
+  }
+}
+
+@media (max-width: 600px) {
+  .ambient-card {
+    grid-template-columns: 1fr;
+    width: 44px;
+    height: 44px;
+    padding: 6px;
+  }
+
+  .ambient-card img {
+    width: 32px;
+  }
+
+  .ambient-card > div {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .download-action,
+  .hero-actions .secondary-action {
+    width: 100%;
   }
 }

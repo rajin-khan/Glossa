@@ -81,6 +81,21 @@ const privacyItems = [
   "Fallback endpoints are user supplied and optional."
 ];
 
+function MacDownloadButton() {
+  return (
+    <a
+      className="primary-action download-action"
+      href="https://github.com/rajin-khan/Glossa/releases"
+    >
+      <span className="apple-mark" aria-hidden="true"></span>
+      <span className="download-label">
+        <strong>Download for macOS</strong>
+        <small>macOS 15 Sequoia or later</small>
+      </span>
+    </a>
+  );
+}
+
 export default function Home() {
   return (
     <>
@@ -106,15 +121,13 @@ export default function Home() {
       <main id="top">
         <section className="hero" aria-labelledby="hero-title">
           <div className="hero-copy">
-            <h1 id="hero-title">Mac audio, translated live.</h1>
+            <h1 id="hero-title">Anything, translated live.</h1>
             <p className="hero-text">
-              Capture system audio, detect speech locally, and show translated captions while
+              Capture Mac audio, detect speech locally, and show translated captions while
               playback continues.
             </p>
             <div className="hero-actions" aria-label="Primary actions">
-              <a className="primary-action" href="https://github.com/rajin-khan/Glossa/releases">
-                Download
-              </a>
+              <MacDownloadButton />
               <a className="secondary-action" href="https://github.com/rajin-khan/Glossa">
                 View GitHub
               </a>
@@ -122,21 +135,21 @@ export default function Home() {
           </div>
 
           <div className="hero-visual" aria-label="Glossa live translation preview">
-            <div className="ambient-card">
-              <Image
-                src="/glossa-app-icon.png"
-                alt="Glossa app icon with an engraved bird and ribbon"
-                width={128}
-                height={128}
-                priority
-              />
-              <div>
-                <span>Target</span>
-                <strong>English</strong>
-              </div>
-            </div>
-
             <div className="app-window">
+              <div className="ambient-card">
+                <Image
+                  src="/glossa-mark-template.png"
+                  alt="Glossa bird and ribbon mark"
+                  width={128}
+                  height={128}
+                  priority
+                />
+                <div>
+                  <span>Target</span>
+                  <strong>English</strong>
+                </div>
+              </div>
+
               <div className="window-bar">
                 <span />
                 <span />
@@ -159,47 +172,49 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="subtitle-stage">
-                  <Image
-                    className="stage-mark"
-                    src="/glossa-mark-template.png"
-                    alt=""
-                    aria-hidden="true"
-                    width={360}
-                    height={360}
-                    loading="eager"
-                  />
-                  <div className="line-stack" aria-label="Example translated subtitles">
-                    {previewLines.map((line, index) => (
-                      <div className="subtitle-line" key={line.label} style={{ "--i": index }}>
-                        <span>{line.label}</span>
-                        <strong>{line.translation}</strong>
-                        <small>{line.source}</small>
-                      </div>
-                    ))}
+                <div className="stage-shell">
+                  <div className="subtitle-stage">
+                    <Image
+                      className="stage-mark"
+                      src="/glossa-mark-template.png"
+                      alt=""
+                      aria-hidden="true"
+                      width={360}
+                      height={360}
+                      loading="eager"
+                    />
+                    <div className="line-stack" aria-label="Example translated subtitles">
+                      {previewLines.map((line, index) => (
+                        <div className="subtitle-line" key={line.label} style={{ "--i": index }}>
+                          <span>{line.label}</span>
+                          <strong>{line.translation}</strong>
+                          <small>{line.source}</small>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="menu-applet">
-              <div className="applet-head">
-                <Image src="/glossa-app-icon.png" alt="" width={42} height={42} />
-                <div>
-                  <strong>Glossa</strong>
-                  <span>Listening in the menu bar</span>
+              <div className="menu-applet">
+                <div className="applet-head">
+                  <Image src="/glossa-mark-template.png" alt="" width={42} height={42} />
+                  <div>
+                    <strong>Glossa</strong>
+                    <span>Listening in the menu bar</span>
+                  </div>
                 </div>
-              </div>
-              <div className="meter" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-                <span />
-                <span />
-              </div>
-              <div className="applet-buttons">
-                <button type="button">Pause</button>
-                <button type="button">Overlay</button>
+                <div className="meter" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <div className="applet-buttons">
+                  <button type="button">Pause</button>
+                  <button type="button">Overlay</button>
+                </div>
               </div>
             </div>
           </div>
@@ -276,9 +291,7 @@ export default function Home() {
               is ad-hoc signed for free GitHub distribution.
             </p>
           </div>
-          <a className="primary-action" href="https://github.com/rajin-khan/Glossa/releases">
-            Download
-          </a>
+          <MacDownloadButton />
         </section>
       </main>
 
