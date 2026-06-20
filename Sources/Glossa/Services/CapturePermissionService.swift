@@ -9,7 +9,14 @@ import CoreGraphics
 #endif
 
 @MainActor
-final class CapturePermissionService {
+protocol CapturePermissionServing: AnyObject {
+    func snapshot() async -> CapturePermissionSnapshot
+    func requestScreenRecording() async -> CapturePermissionSnapshot
+    func requestMicrophone() async -> CapturePermissionSnapshot
+}
+
+@MainActor
+final class CapturePermissionService: CapturePermissionServing {
     func snapshot() async -> CapturePermissionSnapshot {
         CapturePermissionSnapshot(
             screenRecording: screenRecordingState(),

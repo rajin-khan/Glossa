@@ -2,6 +2,29 @@
 
 All notable changes to Glossa are tracked here.
 
+## Unreleased
+
+### Changed
+
+- Split persistence, capture lifecycle, preview playback, AppKit system routing, main-window sections, and menu-bar sections into focused helper types.
+- Simplified the menu-bar applet with one brand mark, compact language and capture menus, lighter live-caption presentation, and smoother state transitions.
+- Reduced overlay customization to the intended single scale control plus source-text visibility.
+
+### Fixed
+
+- Serialized rapid capture stop/start operations so an older stop cannot tear down a newly started session.
+
+### Removed
+
+- Deleted unused overlay typography, width, opacity, and corner-radius preferences.
+- Deleted the superseded static `landing/` site; `site/` remains the single Vercel-ready web app.
+
+### Verified
+
+- `swift test`
+- `pnpm run build` in `site/`
+- `./script/build_and_run.sh --verify --preview-subtitles`
+
 ## 0.1.5 - 2026-06-21
 
 ### Fixed

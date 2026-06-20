@@ -15,7 +15,7 @@ struct AppearanceSettingsView: View {
                 SliderRow(
                     title: "Overlay Scale",
                     value: $store.overlayScale,
-                    range: 0.20...1.35,
+                    range: OverlayLayoutMetrics.scaleRange,
                     step: 0.01,
                     valueLabel: scaleLabel
                 )
@@ -61,7 +61,7 @@ struct AppearanceSettingsView: View {
     }
 
     private var scaleLabel: String {
-        "\(Int(store.overlayScale * 100))% · \(Int(store.overlayPrimaryFontSize)) pt"
+        "\(Int(store.overlayScale * 100))% · \(Int(store.overlayMetrics.primaryFontSize)) pt"
     }
 }
 
@@ -92,25 +92,24 @@ private struct OverlayPreviewCard: View {
     var body: some View {
         VStack(spacing: 8) {
             Text("Audio stays on your Mac.")
-                .font(.system(size: min(30, store.overlayPrimaryFontSize), weight: .semibold, design: store.overlayFontStyle.design))
+                .font(.system(size: min(30, store.overlayMetrics.primaryFontSize), weight: .semibold, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
             if store.showsSourceText {
                 Text("Le son reste sur votre Mac.")
-                    .font(.system(size: min(18, store.overlaySourceFontSize), weight: .medium, design: store.overlayFontStyle.design))
+                    .font(.system(size: min(18, store.overlayMetrics.sourceFontSize), weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.68))
             }
         }
-        .padding(.horizontal, store.overlayHorizontalPadding)
-        .padding(.vertical, store.overlayVerticalPadding)
+        .padding(.horizontal, store.overlayMetrics.horizontalPadding)
+        .padding(.vertical, store.overlayMetrics.verticalPadding)
         .frame(maxWidth: .infinity)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: store.overlayComputedCornerRadius))
-        .background(.black.opacity(store.overlayComputedBackgroundOpacity), in: RoundedRectangle(cornerRadius: store.overlayComputedCornerRadius))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: store.overlayMetrics.cornerRadius))
+        .background(.black.opacity(store.overlayMetrics.backgroundOpacity), in: RoundedRectangle(cornerRadius: store.overlayMetrics.cornerRadius))
         .overlay {
-            RoundedRectangle(cornerRadius: store.overlayComputedCornerRadius)
+            RoundedRectangle(cornerRadius: store.overlayMetrics.cornerRadius)
                 .strokeBorder(.white.opacity(0.12))
         }
         .preferredColorScheme(.dark)
     }
 }
-

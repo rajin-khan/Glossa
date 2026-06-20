@@ -126,7 +126,6 @@ Tests            SwiftPM test suite
 Assets           App icon and menu-bar artwork
 script           Model, build, run, and packaging tools
 site             Next.js landing page for Vercel
-landing          Static landing-page reference
 ```
 
 ## Project status

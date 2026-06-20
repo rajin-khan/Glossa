@@ -23,7 +23,7 @@ struct SubtitleOverlayView: View {
         .padding(.vertical, verticalPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
-        .background(.black.opacity(store.overlayComputedBackgroundOpacity), in: RoundedRectangle(cornerRadius: cornerRadius))
+        .background(.black.opacity(store.overlayMetrics.backgroundOpacity), in: RoundedRectangle(cornerRadius: cornerRadius))
         .overlay {
             RoundedRectangle(cornerRadius: cornerRadius)
                 .strokeBorder(.white.opacity(0.12))
@@ -47,7 +47,7 @@ struct SubtitleOverlayView: View {
     private func subtitle(_ segment: TranscriptSegment) -> some View {
         VStack(spacing: sourceSpacing) {
             Text(segment.translatedText)
-                .font(.system(size: store.overlayPrimaryFontSize, weight: .semibold, design: store.overlayFontStyle.design))
+                .font(.system(size: store.overlayMetrics.primaryFontSize, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -55,7 +55,7 @@ struct SubtitleOverlayView: View {
 
             if store.showsSourceText, segment.sourceText != segment.translatedText {
                 Text(segment.sourceText)
-                    .font(.system(size: store.overlaySourceFontSize, weight: .medium, design: store.overlayFontStyle.design))
+                    .font(.system(size: store.overlayMetrics.sourceFontSize, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.68))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
@@ -65,15 +65,15 @@ struct SubtitleOverlayView: View {
     }
 
     private var listeningPlaceholder: some View {
-        ShimmeringOverlayMark(size: store.overlayEmptyMarkSize)
+        ShimmeringOverlayMark(size: store.overlayMetrics.emptyMarkSize)
     }
 
     private var horizontalPadding: CGFloat {
-        store.currentSubtitle == nil ? 8 : store.overlayHorizontalPadding
+        store.currentSubtitle == nil ? 8 : store.overlayMetrics.horizontalPadding
     }
 
     private var verticalPadding: CGFloat {
-        store.currentSubtitle == nil ? 8 : store.overlayVerticalPadding
+        store.currentSubtitle == nil ? 8 : store.overlayMetrics.verticalPadding
     }
 
     private var sourceSpacing: CGFloat {
@@ -81,7 +81,7 @@ struct SubtitleOverlayView: View {
     }
 
     private var cornerRadius: CGFloat {
-        store.currentSubtitle == nil ? 999 : store.overlayComputedCornerRadius
+        store.currentSubtitle == nil ? 999 : store.overlayMetrics.cornerRadius
     }
 
     private func synchronizeContent(to segment: TranscriptSegment?, animated: Bool) {

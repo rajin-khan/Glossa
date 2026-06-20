@@ -32,20 +32,10 @@ final class SubtitleOverlayController {
 
         updateLayout(animated: false)
         panel?.orderFrontRegardless()
-        store.overlayVisible = true
     }
 
     func hide() {
         panel?.orderOut(nil)
-        store?.overlayVisible = false
-    }
-
-    func toggle() {
-        if store?.overlayVisible == true {
-            hide()
-        } else {
-            show()
-        }
     }
 
     private func makePanel(store: GlossaStore) -> NSPanel {
@@ -121,10 +111,11 @@ final class SubtitleOverlayController {
             return (side, side)
         }
 
-        let primaryFont = CGFloat(store.overlayPrimaryFontSize)
-        let sourceFont = CGFloat(store.overlaySourceFontSize)
-        let horizontalPadding = store.overlayHorizontalPadding + 16
-        let verticalPadding = store.overlayVerticalPadding + 16
+        let layout = store.overlayMetrics
+        let primaryFont = CGFloat(layout.primaryFontSize)
+        let sourceFont = CGFloat(layout.sourceFontSize)
+        let horizontalPadding = layout.horizontalPadding + 16
+        let verticalPadding = layout.verticalPadding + 16
         let minWidth = CGFloat(190 + store.overlayScale * 80)
         let maxWidth = min(screenMaxWidth, max(minWidth, visibleFrame.width * min(0.84, 0.48 + store.overlayScale * 0.20)))
         let primaryText = store.currentSubtitle?.translatedText ?? ""

@@ -1,17 +1,16 @@
-import AppKit
 import Foundation
 
 @MainActor
 final class GlossaStore: ObservableObject {
     @Published var targetLanguage: TranslationLanguage = TranslationLanguage.supported[0] {
         didSet {
-            defaults.set(targetLanguage.code, forKey: DefaultsKey.targetLanguageCode)
+            preferences.saveTargetLanguage(targetLanguage)
         }
     }
 
     @Published var captureMode: CaptureMode = .systemAudio {
         didSet {
-            defaults.set(captureMode.rawValue, forKey: DefaultsKey.captureMode)
+            preferences.saveCaptureMode(captureMode)
             guard oldValue != captureMode else { return }
             if isListening {
                 stopListening()
@@ -21,7 +20,7 @@ final class GlossaStore: ObservableObject {
 
     @Published var transcriptionProvider: TranscriptionProviderKind = .whisperKit {
         didSet {
-            defaults.set(transcriptionProvider.rawValue, forKey: DefaultsKey.transcriptionProvider)
+            preferences.saveTranscriptionProvider(transcriptionProvider)
             guard oldValue != transcriptionProvider else { return }
 
             if isListening {
@@ -44,70 +43,37 @@ final class GlossaStore: ObservableObject {
     @Published private(set) var availableTargetLanguages = TranslationLanguage.supported
     @Published var showsSourceText = true {
         didSet {
-            defaults.set(showsSourceText, forKey: DefaultsKey.showsSourceText)
-            notifyOverlayAppearanceChanged()
-        }
-    }
-    @Published var overlayTextSize: OverlayTextSize = .standard {
-        didSet {
-            defaults.set(overlayTextSize.rawValue, forKey: DefaultsKey.overlayTextSize)
-            overlayFontSize = overlayTextSize.fontSize
-            overlayWidthFraction = overlayTextSize.defaultWidthFraction
+            preferences.saveShowsSourceText(showsSourceText)
             notifyOverlayAppearanceChanged()
         }
     }
     @Published var overlayScale: Double = 1 {
         didSet {
-            defaults.set(Self.clamped(overlayScale, range: 0.20...1.35), forKey: DefaultsKey.overlayScale)
-            notifyOverlayAppearanceChanged()
-        }
-    }
-    @Published var overlayFontSize: Double = OverlayTextSize.standard.fontSize {
-        didSet {
-            defaults.set(Self.clamped(overlayFontSize, range: 12...44), forKey: DefaultsKey.overlayFontSize)
-            notifyOverlayAppearanceChanged()
-        }
-    }
-    @Published var overlayFontStyle: OverlayFontStyle = .rounded {
-        didSet {
-            defaults.set(overlayFontStyle.rawValue, forKey: DefaultsKey.overlayFontStyle)
-            notifyOverlayAppearanceChanged()
-        }
-    }
-    @Published var overlayWidthFraction: Double = 0.66 {
-        didSet {
-            defaults.set(Self.clamped(overlayWidthFraction, range: 0.25...0.88), forKey: DefaultsKey.overlayWidthFraction)
-            notifyOverlayAppearanceChanged()
-        }
-    }
-    @Published var overlayBackgroundOpacity: Double = 0.48 {
-        didSet {
-            defaults.set(Self.clamped(overlayBackgroundOpacity, range: 0.03...0.78), forKey: DefaultsKey.overlayBackgroundOpacity)
-            notifyOverlayAppearanceChanged()
-        }
-    }
-    @Published var overlayCornerRadius: Double = 16 {
-        didSet {
-            defaults.set(Self.clamped(overlayCornerRadius, range: 6...30), forKey: DefaultsKey.overlayCornerRadius)
+            let clampedScale = OverlayLayoutMetrics.clampedScale(overlayScale)
+            if overlayScale != clampedScale {
+                overlayScale = clampedScale
+                return
+            }
+            preferences.saveOverlayScale(overlayScale)
             notifyOverlayAppearanceChanged()
         }
     }
     @Published var fallbackTranslationURLString = "" {
         didSet {
-            defaults.set(fallbackTranslationURLString, forKey: DefaultsKey.fallbackTranslationURL)
+            preferences.saveFallbackTranslationURL(fallbackTranslationURLString)
             translationBroker.configureFallback(endpoint: Self.fallbackTranslationURL(from: fallbackTranslationURLString))
         }
     }
 
     let translationBroker = TranslationRequestBroker()
 
-    private let captureService: AudioCaptureServing
-    private let permissionService: CapturePermissionService
+    private let captureCoordinator: CaptureSessionCoordinator
+    private let systemApplicationService: SystemApplicationServing
     private var transcriptionService: TranscriptionServing
     private let subtitlePipeline = SubtitlePipeline()
-    private let defaults: UserDefaults
-    private var previewTask: Task<Void, Never>?
-    private var activeSubtitleClearTask: Task<Void, Never>?
+    private let subtitleTimeline = SubtitleTimeline()
+    private let previewSession = PreviewSession()
+    private let preferences: GlossaPreferences
     private var hasLoggedAudioFlow = false
     private var overlayVisibilityHandler: ((Bool) -> Void)?
     private var overlayAppearanceChangeHandler: (() -> Void)?
@@ -115,58 +81,28 @@ final class GlossaStore: ObservableObject {
 
     init(
         captureService: AudioCaptureServing = SystemAudioCaptureService(),
-        permissionService: CapturePermissionService = CapturePermissionService(),
+        permissionService: CapturePermissionServing = CapturePermissionService(),
+        systemApplicationService: SystemApplicationServing = SystemApplicationService(),
         transcriptionService: TranscriptionServing? = nil,
         defaults: UserDefaults = .standard
     ) {
-        self.captureService = captureService
-        self.permissionService = permissionService
-        self.defaults = defaults
-        let restoredTargetLanguage = Self.restoreTargetLanguage(from: defaults)
-        let restoredCaptureMode = Self.restoreCaptureMode(from: defaults)
-        let restoredProvider = Self.restoreTranscriptionProvider(from: defaults)
-        let restoredOverlayTextSize = Self.restoreOverlayTextSize(from: defaults)
-        let restoredOverlayFontStyle = Self.restoreOverlayFontStyle(from: defaults)
-        let restoredOverlayScale = Self.restoreDouble(
-            from: defaults,
-            key: DefaultsKey.overlayScale,
-            fallback: 1,
-            range: 0.20...1.35
+        let captureCoordinator = CaptureSessionCoordinator(
+            captureService: captureService,
+            permissionService: permissionService
         )
-        targetLanguage = restoredTargetLanguage
-        captureMode = restoredCaptureMode
-        self.transcriptionProvider = restoredProvider
-        showsSourceText = defaults.object(forKey: DefaultsKey.showsSourceText) as? Bool ?? true
-        overlayTextSize = restoredOverlayTextSize
-        overlayScale = restoredOverlayScale
-        overlayFontSize = Self.restoreDouble(
-            from: defaults,
-            key: DefaultsKey.overlayFontSize,
-            fallback: restoredOverlayTextSize.fontSize,
-            range: 12...44
-        )
-        overlayFontStyle = restoredOverlayFontStyle
-        overlayWidthFraction = Self.restoreDouble(
-            from: defaults,
-            key: DefaultsKey.overlayWidthFraction,
-            fallback: 0.66,
-            range: 0.25...0.88
-        )
-        overlayBackgroundOpacity = Self.restoreDouble(
-            from: defaults,
-            key: DefaultsKey.overlayBackgroundOpacity,
-            fallback: 0.48,
-            range: 0.03...0.78
-        )
-        overlayCornerRadius = Self.restoreDouble(
-            from: defaults,
-            key: DefaultsKey.overlayCornerRadius,
-            fallback: 16,
-            range: 6...30
-        )
-        fallbackTranslationURLString = defaults.string(forKey: DefaultsKey.fallbackTranslationURL) ?? ""
-        self.transcriptionService = transcriptionService ?? Self.makeTranscriptionService(for: restoredProvider)
-        captureService.setMetricsHandler { [weak self] metrics in
+        self.captureCoordinator = captureCoordinator
+        self.systemApplicationService = systemApplicationService
+        let preferences = GlossaPreferences(defaults: defaults)
+        self.preferences = preferences
+        let snapshot = preferences.load()
+        targetLanguage = snapshot.targetLanguage
+        captureMode = snapshot.captureMode
+        self.transcriptionProvider = snapshot.transcriptionProvider
+        showsSourceText = snapshot.showsSourceText
+        overlayScale = snapshot.overlayScale
+        fallbackTranslationURLString = snapshot.fallbackTranslationURLString
+        self.transcriptionService = transcriptionService ?? Self.makeTranscriptionService(for: snapshot.transcriptionProvider)
+        captureCoordinator.setMetricsHandler { [weak self] metrics in
             guard let self else { return }
             if metrics.lastUpdated != nil, !self.hasLoggedAudioFlow {
                 self.hasLoggedAudioFlow = true
@@ -178,7 +114,7 @@ final class GlossaStore: ObservableObject {
             next.bufferCount = self.captureMetrics.bufferCount + 1
             self.captureMetrics = next
         }
-        captureService.setFrameHandler { [weak self] frame in
+        captureCoordinator.setFrameHandler { [weak self] frame in
             guard let self else { return }
             self.pipelineStats = self.subtitlePipeline.receive(frame: frame)
         }
@@ -186,9 +122,15 @@ final class GlossaStore: ObservableObject {
             guard let self else { return }
             self.transcriptionStatus = self.transcriptionService.receive(chunk: chunk)
         }
+        subtitleTimeline.setChangeHandler { [weak self] snapshot in
+            guard let self else { return }
+            activeSubtitle = snapshot.activeSubtitle
+            recentSegments = snapshot.recentSegments
+            notifyOverlayAppearanceChanged()
+        }
         attachTranscriptionHandlers()
         translationBroker.setResultHandler { [weak self] segment in
-            self?.append(segment: segment)
+            self?.subtitleTimeline.append(segment)
         }
         translationBroker.configureFallback(endpoint: Self.fallbackTranslationURL(from: fallbackTranslationURLString))
         recentSegments = []
@@ -202,32 +144,8 @@ final class GlossaStore: ObservableObject {
         activeSubtitle
     }
 
-    var overlayPrimaryFontSize: Double {
-        (8 + overlayScale * 21).rounded()
-    }
-
-    var overlaySourceFontSize: Double {
-        max(9, (overlayPrimaryFontSize * 0.48).rounded())
-    }
-
-    var overlayHorizontalPadding: CGFloat {
-        CGFloat(8 + overlayScale * 20)
-    }
-
-    var overlayVerticalPadding: CGFloat {
-        CGFloat(6 + overlayScale * 12)
-    }
-
-    var overlayComputedCornerRadius: CGFloat {
-        CGFloat(8 + overlayScale * 18)
-    }
-
-    var overlayComputedBackgroundOpacity: Double {
-        min(0.64, max(0.06, 0.04 + overlayScale * 0.44))
-    }
-
-    var overlayEmptyMarkSize: CGFloat {
-        CGFloat(22 + overlayScale * 18)
+    var overlayMetrics: OverlayLayoutMetrics {
+        OverlayLayoutMetrics(scale: overlayScale)
     }
 
     func toggleListening() {
@@ -235,8 +153,7 @@ final class GlossaStore: ObservableObject {
     }
 
     func startListening() {
-        previewTask?.cancel()
-        activeSubtitleClearTask?.cancel()
+        previewSession.stop()
         overlayVisible = true
         overlayVisibilityHandler?(true)
         GlossaLog.app.info(
@@ -253,11 +170,8 @@ final class GlossaStore: ObservableObject {
 
     func stopListening() {
         GlossaLog.app.info("Stopping listening")
-        previewTask?.cancel()
-        previewTask = nil
-        Task {
-            await captureService.stop()
-        }
+        previewSession.stop()
+        captureCoordinator.stop()
         subtitlePipeline.reset()
         transcriptionStatus = transcriptionService.stop()
         translationBroker.reset()
@@ -265,12 +179,11 @@ final class GlossaStore: ObservableObject {
         captureMetrics = .idle
         hasLoggedAudioFlow = false
         listeningState = .idle
-        clearActiveSubtitle()
+        subtitleTimeline.clearActiveSubtitle()
     }
 
     func clearTranscript() {
-        recentSegments.removeAll()
-        clearActiveSubtitle()
+        subtitleTimeline.clearAll()
     }
 
     func setOverlayVisibilityHandler(_ handler: @escaping (Bool) -> Void) {
@@ -300,18 +213,11 @@ final class GlossaStore: ObservableObject {
 
     func resetOverlayAppearance() {
         showsSourceText = true
-        overlayTextSize = .standard
         overlayScale = 1
-        overlayFontSize = OverlayTextSize.standard.fontSize
-        overlayFontStyle = .rounded
-        overlayWidthFraction = OverlayTextSize.standard.defaultWidthFraction
-        overlayBackgroundOpacity = 0.48
-        overlayCornerRadius = 16
-        notifyOverlayAppearanceChanged()
     }
 
     func refreshPermissions() async {
-        permissions = await permissionService.snapshot()
+        permissions = await captureCoordinator.permissions()
     }
 
     func refreshAvailableTargetLanguages() async {
@@ -326,29 +232,19 @@ final class GlossaStore: ObservableObject {
     }
 
     func requestScreenRecordingPermission() async {
-        permissions = await permissionService.requestScreenRecording()
+        permissions = await captureCoordinator.requestScreenRecordingPermission()
     }
 
     func requestMicrophonePermission() async {
-        permissions = await permissionService.requestMicrophone()
+        permissions = await captureCoordinator.requestMicrophonePermission()
     }
 
     func openSystemAudioPermissionSettings() {
-        openSystemSettingsPane([
-            "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
-            "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_ScreenCapture"
-        ])
+        systemApplicationService.openSystemAudioPermissionSettings()
     }
 
     func openMicrophonePermissionSettings() {
-        openSystemSettingsPane([
-            "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone",
-            "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Microphone"
-        ])
-    }
-
-    func openCapturePermissionSettings() {
-        openSystemAudioPermissionSettings()
+        systemApplicationService.openMicrophonePermissionSettings()
     }
 
     func prepareLocalModel() {
@@ -365,20 +261,7 @@ final class GlossaStore: ObservableObject {
     }
 
     func restartApplication() {
-        let bundleURL = Bundle.main.bundleURL
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.createsNewApplicationInstance = true
-        GlossaLog.app.info("Restarting Glossa for refreshed privacy permissions")
-
-        NSWorkspace.shared.openApplication(at: bundleURL, configuration: configuration) { _, error in
-            if let error {
-                GlossaLog.app.error("Restart failed: \(error.localizedDescription, privacy: .public)")
-            }
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            NSApp.terminate(nil)
-        }
+        systemApplicationService.restartApplication()
     }
 
     func handleLaunchArguments(_ arguments: [String]) {
@@ -400,134 +283,41 @@ final class GlossaStore: ObservableObject {
     }
 
     private func applyTransientCaptureMode(_ mode: CaptureMode) {
-        let persistedMode = defaults.string(forKey: DefaultsKey.captureMode)
-        captureMode = mode
-        if let persistedMode {
-            defaults.set(persistedMode, forKey: DefaultsKey.captureMode)
-        } else {
-            defaults.removeObject(forKey: DefaultsKey.captureMode)
+        preferences.withTransientCaptureMode(mode) {
+            captureMode = mode
         }
     }
 
     private func startCapture() {
         listeningState = .starting
         transcriptionStatus = transcriptionService.start(targetLanguage: targetLanguage)
-
-        Task {
-            do {
-                await refreshPermissions()
-                if captureMode == .systemAudio && !permissions.screenRecording.isReady {
-                    GlossaLog.capture.info("Requesting Screen Recording permission")
-                    await requestScreenRecordingPermission()
-                    if !permissions.screenRecording.isReady {
-                        throw AudioCaptureError.screenRecordingPermissionRequired
-                    }
-                }
-                if captureMode == .microphone && !permissions.microphone.isReady {
-                    GlossaLog.capture.info("Requesting microphone permission")
-                    await requestMicrophonePermission()
-                    if !permissions.microphone.isReady {
-                        throw AudioCaptureError.microphonePermissionRequired
-                    }
-                }
-
-                try await captureService.start(mode: captureMode)
-                listeningState = .listening
+        captureCoordinator.start(
+            mode: captureMode,
+            permissionsUpdated: { [weak self] permissions in
+                self?.permissions = permissions
+            },
+            didStart: { [weak self] in
+                self?.listeningState = .listening
                 GlossaLog.capture.info("Capture started successfully")
-            } catch {
+            },
+            didFail: { [weak self] error in
+                guard let self else { return }
                 GlossaLog.capture.error("Capture failed: \(error.localizedDescription, privacy: .public)")
                 transcriptionStatus = transcriptionService.stop()
                 listeningState = .failed(error.localizedDescription)
-                clearActiveSubtitle()
+                subtitleTimeline.clearActiveSubtitle()
             }
-        }
+        )
     }
 
     private func startPreview() {
         listeningState = .previewing
         transcriptionStatus = .ready(provider: "Preview")
-        let samples = [
-            TranscriptSegment(
-                sourceText: "Bonjour, bienvenue dans Glossa.",
-                translatedText: "Hello, welcome to Glossa.",
-                sourceLanguage: "French",
-                isFinal: true
-            ),
-            TranscriptSegment(
-                sourceText: "La traduction apparaît pendant que l'audio continue.",
-                translatedText: "The translation appears while the audio keeps playing.",
-                sourceLanguage: "French",
-                isFinal: false
-            ),
-            TranscriptSegment(
-                sourceText: "On garde l'app légère, discrète, et toujours à portée.",
-                translatedText: "We keep the app light, quiet, and always within reach.",
-                sourceLanguage: "French",
-                isFinal: true
-            )
-        ]
-
-        previewTask = Task { [weak self] in
-            var index = 0
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2))
-                guard !Task.isCancelled else { return }
-                self?.append(segment: samples[index % samples.count])
-                self?.captureMetrics = AudioCaptureMetrics(
-                    level: [0.16, 0.36, 0.68, 0.44][index % 4],
-                    peak: [0.32, 0.58, 0.88, 0.64][index % 4],
-                    sampleCount: 48_000,
-                    bufferCount: (self?.captureMetrics.bufferCount ?? 0) + 1,
-                    sampleRate: 24_000,
-                    channelCount: 1,
-                    lastUpdated: .now
-                )
-                self?.pipelineStats = SubtitlePipelineStats(
-                    receivedFrameCount: (self?.pipelineStats.receivedFrameCount ?? 0) + 1,
-                    emittedChunkCount: (self?.pipelineStats.emittedChunkCount ?? 0) + (index.isMultiple(of: 2) ? 1 : 0),
-                    bufferedAudioDuration: Double((index % 8) + 1) * 0.5,
-                    lastFrameDuration: 0.5,
-                    lastFrameLevel: [0.16, 0.36, 0.68, 0.44][index % 4],
-                    isSpeechActive: true,
-                    lastUpdated: .now
-                )
-                index += 1
-            }
-        }
-    }
-
-    private func append(segment: TranscriptSegment) {
-        activeSubtitleClearTask?.cancel()
-        activeSubtitle = segment
-        recentSegments.append(segment)
-        if recentSegments.count > 12 {
-            recentSegments.removeFirst(recentSegments.count - 12)
-        }
-        notifyOverlayAppearanceChanged()
-        retireActiveSubtitle(after: .seconds(2.6), matching: segment.id)
-    }
-
-    private func clearActiveSubtitle() {
-        activeSubtitleClearTask?.cancel()
-        activeSubtitle = nil
-        notifyOverlayAppearanceChanged()
-    }
-
-    private func retireActiveSubtitle(
-        after delay: Duration,
-        matching expectedID: UUID? = nil
-    ) {
-        activeSubtitleClearTask?.cancel()
-        activeSubtitleClearTask = Task { [weak self] in
-            try? await Task.sleep(for: delay)
-            guard !Task.isCancelled, let self else { return }
-
-            if let expectedID, self.activeSubtitle?.id != expectedID {
-                return
-            }
-
-            self.activeSubtitle = nil
-            self.notifyOverlayAppearanceChanged()
+        previewSession.start { [weak self] update in
+            guard let self else { return }
+            subtitleTimeline.append(update.segment)
+            captureMetrics = update.captureMetrics
+            pipelineStats = update.pipelineStats
         }
     }
 
@@ -548,111 +338,8 @@ final class GlossaStore: ObservableObject {
         }
     }
 
-    private static func restoreTargetLanguage(from defaults: UserDefaults) -> TranslationLanguage {
-        guard let code = defaults.string(forKey: DefaultsKey.targetLanguageCode) else {
-            return TranslationLanguage.supported[0]
-        }
-
-        return TranslationLanguage.supported.first(where: { $0.code == code })
-            ?? TranslationLanguageCatalog.makeLanguage(identifier: code)
-    }
-
-    private static func restoreCaptureMode(from defaults: UserDefaults) -> CaptureMode {
-        guard let rawValue = defaults.string(forKey: DefaultsKey.captureMode),
-              let mode = CaptureMode(rawValue: rawValue)
-        else {
-            return .systemAudio
-        }
-
-        return mode
-    }
-
-    private static func restoreTranscriptionProvider(from defaults: UserDefaults) -> TranscriptionProviderKind {
-        guard let rawValue = defaults.string(forKey: DefaultsKey.transcriptionProvider),
-              let provider = TranscriptionProviderKind(rawValue: rawValue)
-        else {
-            return .whisperKit
-        }
-
-        return provider
-    }
-
-    private static func restoreOverlayTextSize(from defaults: UserDefaults) -> OverlayTextSize {
-        guard let rawValue = defaults.string(forKey: DefaultsKey.overlayTextSize),
-              let size = OverlayTextSize(rawValue: rawValue)
-        else {
-            return .standard
-        }
-
-        return size
-    }
-
-    private static func restoreOverlayFontStyle(from defaults: UserDefaults) -> OverlayFontStyle {
-        guard let rawValue = defaults.string(forKey: DefaultsKey.overlayFontStyle),
-              let style = OverlayFontStyle(rawValue: rawValue)
-        else {
-            return .rounded
-        }
-
-        return style
-    }
-
-    private static func restoreDouble(
-        from defaults: UserDefaults,
-        key: String,
-        fallback: Double,
-        range: ClosedRange<Double>
-    ) -> Double {
-        guard defaults.object(forKey: key) != nil else { return fallback }
-        return clamped(defaults.double(forKey: key), range: range)
-    }
-
-    private static func clamped(_ value: Double, range: ClosedRange<Double>) -> Double {
-        min(range.upperBound, max(range.lowerBound, value))
-    }
-
     private func notifyOverlayAppearanceChanged() {
         overlayAppearanceChangeHandler?()
-    }
-
-    private func openSystemSettingsPane(_ candidates: [String]) {
-        for candidate in candidates {
-            guard let url = URL(string: candidate) else { continue }
-            if NSWorkspace.shared.open(url) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-                    Self.activateSystemSettings()
-                }
-                return
-            }
-        }
-
-        Self.activateSystemSettings()
-    }
-
-    private static func activateSystemSettings() {
-        let bundleIdentifiers = [
-            "com.apple.systempreferences",
-            "com.apple.Preferences"
-        ]
-
-        if let runningApp = bundleIdentifiers
-            .compactMap({ NSRunningApplication.runningApplications(withBundleIdentifier: $0).first })
-            .first {
-            runningApp.activate(options: [.activateAllWindows])
-            return
-        }
-
-        guard let appURL = bundleIdentifiers
-            .compactMap({ NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) })
-            .first else { return }
-
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.activates = true
-        NSWorkspace.shared.openApplication(at: appURL, configuration: configuration) { _, error in
-            if let error {
-                GlossaLog.app.error("System Settings open failed: \(error.localizedDescription, privacy: .public)")
-            }
-        }
     }
 
     private static func makeTranscriptionService(for provider: TranscriptionProviderKind) -> TranscriptionServing {
@@ -669,19 +356,4 @@ final class GlossaStore: ObservableObject {
         guard !trimmed.isEmpty else { return nil }
         return URL(string: trimmed)
     }
-}
-
-private enum DefaultsKey {
-    static let targetLanguageCode = "targetLanguageCode"
-    static let captureMode = "captureMode"
-    static let transcriptionProvider = "transcriptionProvider"
-    static let showsSourceText = "showsSourceText"
-    static let overlayTextSize = "overlayTextSize"
-    static let overlayScale = "overlayScale"
-    static let overlayFontSize = "overlayFontSize"
-    static let overlayFontStyle = "overlayFontStyle"
-    static let overlayWidthFraction = "overlayWidthFraction"
-    static let overlayBackgroundOpacity = "overlayBackgroundOpacity"
-    static let overlayCornerRadius = "overlayCornerRadius"
-    static let fallbackTranslationURL = "fallbackTranslationURL"
 }

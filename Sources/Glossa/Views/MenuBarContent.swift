@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 struct MenuBarContent: View {
@@ -25,7 +24,7 @@ struct MenuBarContent: View {
                 }
             )
 
-            MenuBarControlCard(store: store)
+            MenuBarConfiguration(store: store)
 
             if let permission = activePermission {
                 MenuBarPermissionCard(permission: permission) {
@@ -40,23 +39,20 @@ struct MenuBarContent: View {
                 )
             }
 
-            MenuBarAppearanceStrip(store: store, openSettings: openSettingsWindow)
+            Divider()
+                .overlay(.white.opacity(0.08))
             MenuBarFooter(openMain: openMain, openSettings: openSettingsWindow)
         }
         .padding(12)
-        .frame(width: 306)
+        .frame(width: 300)
         .background {
             ZStack {
                 Color.glossaInk
                 LinearGradient(
-                    colors: [.white.opacity(0.09), .clear, .black.opacity(0.40)],
+                    colors: [.white.opacity(0.07), .clear, .black.opacity(0.34)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
-                GlossaMarkView(size: 210)
-                    .opacity(0.035)
-                    .rotationEffect(.degrees(-8))
-                    .offset(x: 92, y: 112)
             }
         }
         .preferredColorScheme(.dark)
@@ -102,4 +98,3 @@ struct MenuBarContent: View {
         }
     }
 }
-
