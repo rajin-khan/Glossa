@@ -44,11 +44,45 @@ final class GlossaStore: ObservableObject {
     @Published var showsSourceText = true {
         didSet {
             defaults.set(showsSourceText, forKey: DefaultsKey.showsSourceText)
+            notifyOverlayAppearanceChanged()
         }
     }
     @Published var overlayTextSize: OverlayTextSize = .standard {
         didSet {
             defaults.set(overlayTextSize.rawValue, forKey: DefaultsKey.overlayTextSize)
+            overlayFontSize = overlayTextSize.fontSize
+            overlayWidthFraction = overlayTextSize.defaultWidthFraction
+            notifyOverlayAppearanceChanged()
+        }
+    }
+    @Published var overlayFontSize: Double = OverlayTextSize.standard.fontSize {
+        didSet {
+            defaults.set(Self.clamped(overlayFontSize, range: 12...44), forKey: DefaultsKey.overlayFontSize)
+            notifyOverlayAppearanceChanged()
+        }
+    }
+    @Published var overlayFontStyle: OverlayFontStyle = .rounded {
+        didSet {
+            defaults.set(overlayFontStyle.rawValue, forKey: DefaultsKey.overlayFontStyle)
+            notifyOverlayAppearanceChanged()
+        }
+    }
+    @Published var overlayWidthFraction: Double = 0.66 {
+        didSet {
+            defaults.set(Self.clamped(overlayWidthFraction, range: 0.25...0.88), forKey: DefaultsKey.overlayWidthFraction)
+            notifyOverlayAppearanceChanged()
+        }
+    }
+    @Published var overlayBackgroundOpacity: Double = 0.48 {
+        didSet {
+            defaults.set(Self.clamped(overlayBackgroundOpacity, range: 0.03...0.78), forKey: DefaultsKey.overlayBackgroundOpacity)
+            notifyOverlayAppearanceChanged()
+        }
+    }
+    @Published var overlayCornerRadius: Double = 16 {
+        didSet {
+            defaults.set(Self.clamped(overlayCornerRadius, range: 6...30), forKey: DefaultsKey.overlayCornerRadius)
+            notifyOverlayAppearanceChanged()
         }
     }
     @Published var fallbackTranslationURLString = "" {
@@ -68,6 +102,8 @@ final class GlossaStore: ObservableObject {
     private var previewTask: Task<Void, Never>?
     private var hasLoggedAudioFlow = false
     private var overlayVisibilityHandler: ((Bool) -> Void)?
+    private var overlayAppearanceChangeHandler: (() -> Void)?
+    private var overlayPositionResetHandler: (() -> Void)?
 
     init(
         captureService: AudioCaptureServing = SystemAudioCaptureService(),
@@ -82,11 +118,37 @@ final class GlossaStore: ObservableObject {
         let restoredCaptureMode = Self.restoreCaptureMode(from: defaults)
         let restoredProvider = Self.restoreTranscriptionProvider(from: defaults)
         let restoredOverlayTextSize = Self.restoreOverlayTextSize(from: defaults)
+        let restoredOverlayFontStyle = Self.restoreOverlayFontStyle(from: defaults)
         targetLanguage = restoredTargetLanguage
         captureMode = restoredCaptureMode
         self.transcriptionProvider = restoredProvider
         showsSourceText = defaults.object(forKey: DefaultsKey.showsSourceText) as? Bool ?? true
         overlayTextSize = restoredOverlayTextSize
+        overlayFontSize = Self.restoreDouble(
+            from: defaults,
+            key: DefaultsKey.overlayFontSize,
+            fallback: restoredOverlayTextSize.fontSize,
+            range: 12...44
+        )
+        overlayFontStyle = restoredOverlayFontStyle
+        overlayWidthFraction = Self.restoreDouble(
+            from: defaults,
+            key: DefaultsKey.overlayWidthFraction,
+            fallback: 0.66,
+            range: 0.25...0.88
+        )
+        overlayBackgroundOpacity = Self.restoreDouble(
+            from: defaults,
+            key: DefaultsKey.overlayBackgroundOpacity,
+            fallback: 0.48,
+            range: 0.03...0.78
+        )
+        overlayCornerRadius = Self.restoreDouble(
+            from: defaults,
+            key: DefaultsKey.overlayCornerRadius,
+            fallback: 16,
+            range: 6...30
+        )
         fallbackTranslationURLString = defaults.string(forKey: DefaultsKey.fallbackTranslationURL) ?? ""
         self.transcriptionService = transcriptionService ?? Self.makeTranscriptionService(for: restoredProvider)
         captureService.setMetricsHandler { [weak self] metrics in
@@ -171,9 +233,36 @@ final class GlossaStore: ObservableObject {
         overlayVisibilityHandler = handler
     }
 
+    func setOverlayAppearanceChangeHandler(_ handler: @escaping () -> Void) {
+        overlayAppearanceChangeHandler = handler
+    }
+
+    func setOverlayPositionResetHandler(_ handler: @escaping () -> Void) {
+        overlayPositionResetHandler = handler
+    }
+
     func toggleOverlay() {
         overlayVisible.toggle()
         overlayVisibilityHandler?(overlayVisible)
+    }
+
+    func resetOverlayPosition() {
+        overlayPositionResetHandler?()
+        if !overlayVisible {
+            overlayVisible = true
+            overlayVisibilityHandler?(true)
+        }
+    }
+
+    func resetOverlayAppearance() {
+        showsSourceText = true
+        overlayTextSize = .standard
+        overlayFontSize = OverlayTextSize.standard.fontSize
+        overlayFontStyle = .rounded
+        overlayWidthFraction = OverlayTextSize.standard.defaultWidthFraction
+        overlayBackgroundOpacity = 0.48
+        overlayCornerRadius = 16
+        notifyOverlayAppearanceChanged()
     }
 
     func refreshPermissions() async {
@@ -408,6 +497,34 @@ final class GlossaStore: ObservableObject {
         return size
     }
 
+    private static func restoreOverlayFontStyle(from defaults: UserDefaults) -> OverlayFontStyle {
+        guard let rawValue = defaults.string(forKey: DefaultsKey.overlayFontStyle),
+              let style = OverlayFontStyle(rawValue: rawValue)
+        else {
+            return .rounded
+        }
+
+        return style
+    }
+
+    private static func restoreDouble(
+        from defaults: UserDefaults,
+        key: String,
+        fallback: Double,
+        range: ClosedRange<Double>
+    ) -> Double {
+        guard defaults.object(forKey: key) != nil else { return fallback }
+        return clamped(defaults.double(forKey: key), range: range)
+    }
+
+    private static func clamped(_ value: Double, range: ClosedRange<Double>) -> Double {
+        min(range.upperBound, max(range.lowerBound, value))
+    }
+
+    private func notifyOverlayAppearanceChanged() {
+        overlayAppearanceChangeHandler?()
+    }
+
     private static func makeTranscriptionService(for provider: TranscriptionProviderKind) -> TranscriptionServing {
         switch provider {
         case .debug:
@@ -430,5 +547,10 @@ private enum DefaultsKey {
     static let transcriptionProvider = "transcriptionProvider"
     static let showsSourceText = "showsSourceText"
     static let overlayTextSize = "overlayTextSize"
+    static let overlayFontSize = "overlayFontSize"
+    static let overlayFontStyle = "overlayFontStyle"
+    static let overlayWidthFraction = "overlayWidthFraction"
+    static let overlayBackgroundOpacity = "overlayBackgroundOpacity"
+    static let overlayCornerRadius = "overlayCornerRadius"
     static let fallbackTranslationURL = "fallbackTranslationURL"
 }

@@ -13,6 +13,8 @@ struct ContentView: View {
             switch selection ?? .live {
             case .live:
                 MainPanelView(store: store)
+            case .appearance:
+                AppearanceSettingsView(store: store)
             case .transcript:
                 TranscriptHistoryView(store: store)
             }

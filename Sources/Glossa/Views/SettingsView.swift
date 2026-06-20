@@ -12,10 +12,10 @@ struct SettingsView: View {
                     Label("General", systemImage: "gearshape")
                 }
 
-            OverlaySettingsView(store: store)
-                .tag(SettingsTab.overlay)
+            AppearanceSettingsView(store: store)
+                .tag(SettingsTab.appearance)
                 .tabItem {
-                    Label("Overlay", systemImage: "captions.bubble")
+                    Label("Appearance", systemImage: "paintpalette")
                 }
 
             PrivacySettingsView(store: store)
@@ -24,24 +24,31 @@ struct SettingsView: View {
                     Label("Privacy", systemImage: "hand.raised")
                 }
         }
-        .frame(width: 560, height: 420)
+        .frame(width: 620, height: 540)
         .padding(.top, 8)
     }
 }
 
 private enum SettingsTab: String {
     case general
-    case overlay
+    case appearance
     case privacy
 
     static var launchSelection: SettingsTab {
         let prefix = "--settings-tab="
         guard let argument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix(prefix) }),
-              let tab = SettingsTab(rawValue: String(argument.dropFirst(prefix.count)))
+              let tab = SettingsTab.resolve(String(argument.dropFirst(prefix.count)))
         else {
             return .general
         }
         return tab
+    }
+
+    private static func resolve(_ rawValue: String) -> SettingsTab? {
+        if rawValue == "overlay" {
+            return .appearance
+        }
+        return SettingsTab(rawValue: rawValue)
     }
 }
 
@@ -91,36 +98,147 @@ private struct GeneralSettingsView: View {
     }
 }
 
-private struct OverlaySettingsView: View {
+struct AppearanceSettingsView: View {
     @ObservedObject var store: GlossaStore
 
     var body: some View {
         Form {
-            Section("Captions") {
+            Section("Preview") {
+                OverlayPreviewCard(store: store)
+            }
+
+            Section("Typography") {
                 Toggle("Show original speech below translation", isOn: $store.showsSourceText)
 
-                Picker("Text Size", selection: $store.overlayTextSize) {
+                Picker("Preset", selection: $store.overlayTextSize) {
                     ForEach(OverlayTextSize.allCases) { size in
                         Text(size.title).tag(size)
                     }
                 }
                 .pickerStyle(.segmented)
+
+                Picker("Font", selection: $store.overlayFontStyle) {
+                    ForEach(OverlayFontStyle.allCases) { style in
+                        Text(style.title).tag(style)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                SliderRow(
+                    title: "Subtitle Size",
+                    value: $store.overlayFontSize,
+                    range: 12...44,
+                    step: 1,
+                    valueLabel: "\(Int(store.overlayFontSize)) pt"
+                )
             }
 
-            Section("Floating Overlay") {
+            Section("Floating Window") {
                 LabeledContent("Visibility", value: store.overlayVisible ? "Shown" : "Hidden")
 
-                Button(store.overlayVisible ? "Hide Overlay" : "Show Overlay") {
-                    store.toggleOverlay()
+                SliderRow(
+                    title: "Window Width",
+                    value: $store.overlayWidthFraction,
+                    range: 0.25...0.88,
+                    step: 0.01,
+                    valueLabel: "\(Int(store.overlayWidthFraction * 100))%"
+                )
+
+                SliderRow(
+                    title: "Background",
+                    value: $store.overlayBackgroundOpacity,
+                    range: 0.03...0.78,
+                    step: 0.01,
+                    valueLabel: "\(Int(store.overlayBackgroundOpacity * 100))%"
+                )
+
+                SliderRow(
+                    title: "Corners",
+                    value: $store.overlayCornerRadius,
+                    range: 6...30,
+                    step: 1,
+                    valueLabel: "\(Int(store.overlayCornerRadius)) px"
+                )
+
+                HStack {
+                    Button(store.overlayVisible ? "Hide Overlay" : "Show Overlay") {
+                        store.toggleOverlay()
+                    }
+
+                    Button("Preview Motion") {
+                        store.captureMode = .preview
+                        if !store.isListening {
+                            store.startListening()
+                        }
+                    }
+
+                    Button("Reset Position") {
+                        store.resetOverlayPosition()
+                    }
+
+                    Spacer()
+
+                    Button("Reset Appearance") {
+                        store.resetOverlayAppearance()
+                    }
                 }
 
-                Text("Drag the overlay from its background to place it anywhere on screen.")
+                Text("Drag the subtitle window from its background. Reset Position returns it to the lower center.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
         .padding(.horizontal, 12)
+    }
+}
+
+private struct SliderRow: View {
+    let title: String
+    @Binding var value: Double
+    let range: ClosedRange<Double>
+    let step: Double
+    let valueLabel: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title)
+                Spacer()
+                Text(valueLabel)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+            Slider(value: $value, in: range, step: step)
+        }
+    }
+}
+
+private struct OverlayPreviewCard: View {
+    @ObservedObject var store: GlossaStore
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text("Audio stays on your Mac.")
+                .font(.system(size: min(30, store.overlayFontSize), weight: .semibold, design: store.overlayFontStyle.design))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+            if store.showsSourceText {
+                Text("Le son reste sur votre Mac.")
+                    .font(.system(size: max(10, min(18, store.overlayFontSize * 0.48)), weight: .medium, design: store.overlayFontStyle.design))
+                    .foregroundStyle(.white.opacity(0.68))
+            }
+        }
+        .padding(.horizontal, 22)
+        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: store.overlayCornerRadius))
+        .background(.black.opacity(store.overlayBackgroundOpacity), in: RoundedRectangle(cornerRadius: store.overlayCornerRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: store.overlayCornerRadius)
+                .strokeBorder(.white.opacity(0.12))
+        }
+        .preferredColorScheme(.dark)
     }
 }
 

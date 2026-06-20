@@ -50,19 +50,21 @@ struct MainPanelView: View {
         .navigationTitle("Glossa")
         .toolbar {
             ToolbarItemGroup {
-                Button {
+            Button {
+                withAnimation(.snappy(duration: 0.18)) {
                     store.toggleOverlay()
-                } label: {
-                    Label(
-                        store.overlayVisible ? "Hide Overlay" : "Show Overlay",
+                }
+            } label: {
+                Label(
+                    store.overlayVisible ? "Hide Overlay" : "Show Overlay",
                         systemImage: store.overlayVisible ? "rectangle.slash" : "rectangle.on.rectangle"
                     )
                 }
                 .help(store.overlayVisible ? "Hide subtitle overlay" : "Show subtitle overlay")
 
-                SettingsLink {
-                    Label("Settings", systemImage: "gearshape")
-                }
+            SettingsLink {
+                Label("Settings", systemImage: "gearshape")
+            }
             }
         }
     }
@@ -100,7 +102,9 @@ struct MainPanelView: View {
             Spacer()
 
             Button {
-                store.toggleListening()
+                withAnimation(.snappy(duration: 0.18)) {
+                    store.toggleListening()
+                }
             } label: {
                 Label(
                     store.isListening ? "Pause" : "Start",
@@ -132,7 +136,7 @@ struct MainPanelView: View {
                     GlossaMarkView(size: 28)
                         .opacity(0.72)
                 }
-                Text("A private ribbon for live translated subtitles.")
+                Text("Private captions for Mac audio.")
                     .font(.callout.weight(.medium))
                     .foregroundStyle(.white.opacity(0.62))
             }

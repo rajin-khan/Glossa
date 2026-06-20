@@ -30,6 +30,11 @@ final class GlossaStoreTests: XCTestCase {
         )
         firstStore.showsSourceText = false
         firstStore.overlayTextSize = .large
+        firstStore.overlayFontSize = 36
+        firstStore.overlayFontStyle = .serif
+        firstStore.overlayWidthFraction = 0.48
+        firstStore.overlayBackgroundOpacity = 0.62
+        firstStore.overlayCornerRadius = 24
 
         let restoredStore = GlossaStore(
             captureService: CaptureServiceSpy(),
@@ -39,6 +44,11 @@ final class GlossaStoreTests: XCTestCase {
 
         XCTAssertFalse(restoredStore.showsSourceText)
         XCTAssertEqual(restoredStore.overlayTextSize, .large)
+        XCTAssertEqual(restoredStore.overlayFontSize, 36)
+        XCTAssertEqual(restoredStore.overlayFontStyle, .serif)
+        XCTAssertEqual(restoredStore.overlayWidthFraction, 0.48, accuracy: 0.001)
+        XCTAssertEqual(restoredStore.overlayBackgroundOpacity, 0.62, accuracy: 0.001)
+        XCTAssertEqual(restoredStore.overlayCornerRadius, 24)
     }
 
     func testPreviewLaunchModeDoesNotReplaceSavedCaptureSource() {

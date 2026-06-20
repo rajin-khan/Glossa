@@ -7,12 +7,14 @@ struct MenuBarContent: View {
     var openSettingsWindow: () -> Void = { }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             header
 
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Button {
-                    store.toggleListening()
+                    withAnimation(.snappy(duration: 0.18)) {
+                        store.toggleListening()
+                    }
                 } label: {
                     Label(
                         store.isListening ? "Pause" : "Start",
@@ -24,19 +26,28 @@ struct MenuBarContent: View {
                 .controlSize(.large)
 
                 Button {
-                    store.toggleOverlay()
+                    withAnimation(.snappy(duration: 0.18)) {
+                        store.toggleOverlay()
+                    }
                 } label: {
-                    Label(store.overlayVisible ? "Hide" : "Overlay", systemImage: "captions.bubble")
-                        .frame(maxWidth: .infinity)
+                    Image(systemName: store.overlayVisible ? "rectangle.slash" : "captions.bubble")
+                        .frame(width: 34)
                 }
                 .controlSize(.large)
+                .help(store.overlayVisible ? "Hide overlay" : "Show overlay")
             }
 
-            VStack(spacing: 10) {
+            VStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Translate")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text("Translate")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(store.targetLanguage.nativeName)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.teal)
+                    }
                     Picker("Translate", selection: $store.targetLanguage) {
                         ForEach(store.availableTargetLanguages) { language in
                             Text("\(language.name) · \(language.nativeName)")
@@ -60,11 +71,11 @@ struct MenuBarContent: View {
                     .pickerStyle(.segmented)
                 }
             }
-            .padding(12)
-            .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 12))
+            .padding(10)
+            .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14))
             .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(.white.opacity(0.10))
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(.white.opacity(0.09))
             }
 
             if needsCapturePermission {
@@ -73,10 +84,11 @@ struct MenuBarContent: View {
                 nowCard
             }
 
+            appearanceStrip
             footer
         }
-        .padding(16)
-        .frame(width: 356)
+        .padding(14)
+        .frame(width: 332)
         .background {
             ZStack {
                 Color.glossaInk
@@ -86,7 +98,7 @@ struct MenuBarContent: View {
                     endPoint: .bottomTrailing
                 )
                 GlossaMarkView(size: 220)
-                    .opacity(0.045)
+                    .opacity(0.04)
                     .rotationEffect(.degrees(-8))
                     .offset(x: 94, y: 112)
             }
@@ -96,11 +108,11 @@ struct MenuBarContent: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            GlossaAppIconView(size: 46)
+            GlossaAppIconView(size: 40)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("Glossa")
-                    .font(.title3.weight(.semibold))
+                    .font(.headline.weight(.semibold))
                 Text(statusText)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -116,7 +128,7 @@ struct MenuBarContent: View {
     private var nowCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Label("Ribbon", systemImage: "text.bubble")
+                Label("Live line", systemImage: "text.bubble")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -126,7 +138,7 @@ struct MenuBarContent: View {
             }
 
             Text(store.currentSubtitle?.translatedText ?? "Ready to carry the next line.")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
                 .lineLimit(3)
                 .minimumScaleFactor(0.78)
 
@@ -170,6 +182,26 @@ struct MenuBarContent: View {
         }
     }
 
+    private var appearanceStrip: some View {
+        HStack(spacing: 8) {
+            Label("\(Int(store.overlayFontSize)) pt", systemImage: "textformat.size")
+            Spacer()
+            Text("\(Int(store.overlayWidthFraction * 100))% width")
+            Button {
+                openSettingsWindow()
+            } label: {
+                Image(systemName: "slider.horizontal.3")
+            }
+            .buttonStyle(.borderless)
+            .help("Open appearance settings")
+        }
+        .font(.caption2.weight(.medium))
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(.white.opacity(0.045), in: Capsule())
+    }
+
     private var footer: some View {
         HStack(spacing: 8) {
             Button {
@@ -210,13 +242,13 @@ struct MenuBarContent: View {
     private var statusText: String {
         switch store.listeningState {
         case .idle:
-            "Ready in the menu bar"
+            "Ready"
         case .starting:
-            "Preparing local speech"
+            "Preparing speech"
         case .listening:
-            "Listening privately"
+            "Listening"
         case .previewing:
-            "Previewing subtitles"
+            "Previewing"
         case .failed:
             "Needs attention"
         }
