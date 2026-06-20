@@ -316,7 +316,7 @@ h3 {
 .ambient-card {
   position: absolute;
   top: -30px;
-  right: -116px;
+  right: -96px;
   left: auto;
   z-index: 6;
   display: grid;
@@ -717,24 +717,69 @@ small,
   gap: 10px;
 }
 
-.language-grid div {
-  min-height: 96px;
-  padding: 16px;
+.language-tile {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: center;
+  min-height: 104px;
+  overflow: hidden;
+  padding: 16px 18px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.045);
+  background:
+    radial-gradient(circle at 88% 16%, rgba(120, 228, 239, 0.14), transparent 54%),
+    rgba(255, 255, 255, 0.045);
+  contain: paint;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
 }
 
-.language-grid span {
+.language-tile::before {
+  position: absolute;
+  inset: -80% -55%;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(
+    112deg,
+    transparent 39%,
+    rgba(184, 247, 255, 0.04) 45%,
+    rgba(184, 247, 255, 0.22) 50%,
+    rgba(184, 247, 255, 0.04) 55%,
+    transparent 61%
+  );
+  opacity: 0;
+  transform: translate3d(-46%, 0, 0);
+  animation: language-shimmer 8s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 180ms);
+}
+
+.language-tile:hover {
+  border-color: rgba(120, 228, 239, 0.32);
+  background:
+    radial-gradient(circle at 88% 16%, rgba(120, 228, 239, 0.2), transparent 58%),
+    rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px);
+}
+
+.language-tile span {
   display: block;
-  margin-bottom: 18px;
   color: var(--soft);
   font-size: 13px;
+  font-weight: 580;
 }
 
-.language-grid strong {
-  font-size: 18px;
-  font-weight: 650;
+.language-tile strong {
+  color: var(--text);
+  font-size: clamp(34px, 3.2vw, 46px);
+  font-weight: 560;
+  line-height: 1;
+  text-shadow: 0 0 28px rgba(120, 228, 239, 0.2);
 }
 
 .privacy {
@@ -831,6 +876,28 @@ small,
   }
 }
 
+@keyframes language-shimmer {
+  0%,
+  62% {
+    opacity: 0;
+    transform: translate3d(-46%, 0, 0);
+  }
+
+  70% {
+    opacity: 0.78;
+  }
+
+  84% {
+    opacity: 0.78;
+  }
+
+  92%,
+  100% {
+    opacity: 0;
+    transform: translate3d(46%, 0, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -868,7 +935,7 @@ small,
 
   .ambient-card {
     top: -24px;
-    right: 18px;
+    right: 26px;
     left: auto;
     width: 150px;
   }
@@ -935,7 +1002,7 @@ small,
 
   .ambient-card {
     top: 8px;
-    right: 10px;
+    right: 14px;
     left: auto;
     grid-template-columns: auto 1fr;
     gap: 7px;
@@ -1001,7 +1068,26 @@ small,
   }
 
   .language-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .language-tile {
     grid-template-columns: 1fr;
+    gap: 10px;
+    min-height: 92px;
+    padding: 11px;
+  }
+
+  .language-tile span {
+    overflow: hidden;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .language-tile strong {
+    font-size: clamp(28px, 9vw, 36px);
   }
 
   .subtitle-stage {

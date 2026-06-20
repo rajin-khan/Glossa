@@ -62,16 +62,16 @@ const features = [
   }
 ];
 
-const languagePairs = [
-  ["Spanish", "English"],
-  ["Japanese", "English"],
-  ["French", "English"],
-  ["Korean", "English"],
-  ["Arabic", "English"],
-  ["Hindi", "English"],
-  ["Mandarin", "English"],
-  ["Portuguese", "English"],
-  ["Bangla", "English"]
+const languages = [
+  { name: "Spanish", glyph: "Ñ", code: "es" },
+  { name: "Japanese", glyph: "あ", code: "ja" },
+  { name: "French", glyph: "É", code: "fr" },
+  { name: "Korean", glyph: "한", code: "ko" },
+  { name: "Arabic", glyph: "ع", code: "ar" },
+  { name: "Hindi", glyph: "अ", code: "hi" },
+  { name: "Mandarin", glyph: "中", code: "zh" },
+  { name: "Portuguese", glyph: "ã", code: "pt" },
+  { name: "Bangla", glyph: "অ", code: "bn" }
 ];
 
 const privacyItems = [
@@ -257,11 +257,16 @@ export default function Home() {
             </p>
           </div>
           <div className="language-grid">
-            {languagePairs.map(([source, target]) => (
-              <div key={`${source}-${target}`}>
-                <span>{source}</span>
-                <strong>{target}</strong>
-              </div>
+            {languages.map((language, index) => (
+              <article
+                className="language-tile"
+                key={language.code}
+                style={{ "--i": index }}
+                aria-label={`${language.name} language example: ${language.glyph}`}
+              >
+                <span>{language.name}</span>
+                <strong lang={language.code}>{language.glyph}</strong>
+              </article>
             ))}
           </div>
         </section>
