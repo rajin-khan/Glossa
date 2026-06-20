@@ -19,7 +19,10 @@ export GLOSSA_APP_VERSION="$VERSION"
 
 rm -f "$ARCHIVE" "$CHECKSUMS"
 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "$ARCHIVE"
-/usr/bin/shasum -a 256 "$ARCHIVE" >"$CHECKSUMS"
+(
+  cd "$DIST_DIR"
+  /usr/bin/shasum -a 256 "$(basename "$ARCHIVE")" >"$(basename "$CHECKSUMS")"
+)
 
 echo "Packaged $ARCHIVE"
 echo "Checksum written to $CHECKSUMS"

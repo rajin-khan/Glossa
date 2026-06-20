@@ -1,82 +1,140 @@
 <p align="center">
-  <img src="Assets/Glossa-AppIcon.png" alt="Glossa app icon: an engraved glass bird carrying a ribbon" width="128" height="128">
+  <img src="Assets/Glossa-AppIcon.png" alt="Glossa app icon" width="112" height="112">
 </p>
 
 <h1 align="center">Glossa</h1>
 
 <p align="center">
-  A native macOS menu-bar app for live translated subtitles from the audio playing on your Mac.
+  Live translated subtitles for whatever your Mac is playing.
 </p>
 
 <p align="center">
-  <a href="site/">Website</a>
+  <a href="https://github.com/rajin-khan/Glossa/releases/download/v0.1.0/Glossa-0.1.0-macOS.zip">
+    <img src="https://img.shields.io/badge/Download_for_macOS-0.1.0_preview-78EAF2?style=for-the-badge&logo=apple&logoColor=111111" alt="Download Glossa 0.1.0 preview for macOS">
+  </a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/macOS-15_Sequoia%2B-202124?style=flat-square&logo=apple&logoColor=white" alt="Requires macOS 15 Sequoia or later">
+  <img src="https://img.shields.io/badge/Swift-6.0-F05138?style=flat-square&logo=swift&logoColor=white" alt="Built with Swift 6">
+  <img src="https://img.shields.io/badge/Processing-Local_first-19C7CE?style=flat-square" alt="Local-first processing">
+</p>
+
+<p align="center">
+  <a href="#how-it-works">How it works</a>
   ·
-  <a href="CHANGELOG.md">Changelog</a>
+  <a href="#install">Install</a>
+  ·
+  <a href="#privacy">Privacy</a>
   ·
   <a href="ROADMAP.md">Roadmap</a>
 </p>
 
-## Overview
+<p align="center">
+  <img src="docs/assets/glossa-live-preview.png" alt="Glossa translating French subtitles into English in preview mode" width="920">
+</p>
 
-Glossa listens to system audio or a microphone fallback, transcribes speech locally, auto-detects the source language, and translates captions into the target language you choose. It is designed as a polished macOS utility: quiet in the menu bar, quick from a compact applet, and readable through a floating subtitle overlay.
+## Anything, translated live
 
-The current build is free to develop and local-first. Speech recognition runs through WhisperKit on this Mac. Translation uses Apple Translation first, with an optional LibreTranslate-compatible fallback for Bangla or other unsupported Apple pairs. Glossa contains no OpenAI API integration, no account requirement, and no paid cloud dependency.
+Glossa is a native macOS menu-bar app that turns system audio into translated subtitles. Pick a target language once, keep listening, and let Glossa detect the spoken language while playback continues.
 
-## Highlights
+The core pipeline is free to run and local-first. WhisperKit handles speech recognition on your Mac, Apple Translation handles supported language pairs, and an optional LibreTranslate-compatible endpoint can extend coverage without a required paid API.
 
-- Native SwiftUI macOS app with a dark bird-and-ribbon identity
-- Visible menu-bar bird icon with a compact control applet
-- Start, pause, target language, capture source, overlay, and latest caption from the applet
-- System-audio capture through ScreenCaptureKit
-- Microphone fallback through AVAudioEngine
-- Automatic source-language detection with local WhisperKit
-- Apple on-device translation plus Glossa's promised targets, including Bangla
-- Optional LibreTranslate-compatible fallback endpoint
-- Floating bilingual subtitle overlay across Spaces and full-screen apps
-- Local transcript history and recovery UI for permissions and model setup
-- Audio frames are processed in memory and never saved by Glossa
+## How it works
 
-## Requirements
+| | |
+| --- | --- |
+| **Listen** | Capture audio playing on your Mac with ScreenCaptureKit, or switch to the microphone fallback. |
+| **Understand** | Transcribe speech locally with WhisperKit and automatically detect the source language. |
+| **Translate** | Use Apple on-device translation first, with an optional LibreTranslate-compatible fallback. |
+| **Read** | Follow captions in the main window, compact menu-bar applet, or floating bilingual overlay. |
 
-- macOS 15 or newer
-- Apple Silicon recommended
-- Screen & System Audio Recording permission for system audio capture
-- Internet once to download the free Whisper model and any Apple language packs
+### Built for the background
 
-## Run From Source
+- Native SwiftUI interface with a compact menu-bar controller
+- Automatic source-language detection
+- Target-language switching without restarting capture
+- Floating subtitles across Spaces and full-screen apps
+- Recent caption history with final and in-progress states
+- Permission, model, and fallback recovery built into the app
+- Audio frames processed in memory and never saved by Glossa
+
+## Install
+
+> Glossa currently ships as an early preview for macOS 15 Sequoia or later. Apple Silicon is recommended.
+
+1. [Download Glossa 0.1.0 for macOS](https://github.com/rajin-khan/Glossa/releases/download/v0.1.0/Glossa-0.1.0-macOS.zip).
+2. Unzip `Glossa-0.1.0-macOS.zip` and move `Glossa.app` to Applications.
+3. On first launch, Control-click Glossa and choose **Open**.
+4. Choose a target language and grant Screen & System Audio Recording access when prompted.
+
+The preview uses a stable ad-hoc signature so development and testing remain free. It is not notarized with a paid Apple Developer ID yet. You can verify the archive against [`SHA256SUMS.txt`](https://github.com/rajin-khan/Glossa/releases/download/v0.1.0/SHA256SUMS.txt).
+
+### Permissions
+
+| Permission | Why Glossa asks |
+| --- | --- |
+| Screen & System Audio Recording | Required to hear audio playing on your Mac through ScreenCaptureKit. |
+| Microphone | Used only when you explicitly choose Microphone as the capture source. |
+
+Glossa needs an internet connection once to fetch the free Whisper model and any Apple language packs that are not already installed.
+
+## Privacy
+
+Glossa does not require an account, an OpenAI API key, or a paid cloud service.
+
+- Audio is processed in memory and is not saved by Glossa.
+- WhisperKit transcription runs locally on your Mac.
+- Apple Translation uses local language packs when available.
+- No analytics or tracking service is included.
+- Text is sent off-device only when you configure a LibreTranslate fallback URL for unsupported language pairs.
+
+For a completely local fallback, point Glossa at a self-hosted endpoint such as `http://127.0.0.1:5000`.
+
+## Build from source
+
+You will need macOS 15 or later, Xcode command-line tools, and an Apple Silicon Mac for the best realtime performance.
 
 ```bash
+git clone https://github.com/rajin-khan/Glossa.git
+cd Glossa
 ./script/prepare_local_model.sh
 ./script/build_and_run.sh
 ```
 
-The app bundle is staged at `dist/Glossa.app`. The default `tiny` multilingual model keeps first-run setup and realtime latency manageable.
+The app bundle is staged at `dist/Glossa.app`. The default multilingual `tiny` model keeps first-run setup and realtime latency manageable.
 
-## Package A Release
+### Test
+
+```bash
+swift test
+```
+
+### Package a release
 
 ```bash
 ./script/package_release.sh
 ```
 
-This creates `dist/Glossa-0.1.0-macOS.zip` and `dist/SHA256SUMS.txt` using an optimized release build.
+This creates `dist/Glossa-0.1.0-macOS.zip` and `dist/SHA256SUMS.txt` from an optimized build. Set `CODESIGN_IDENTITY` later to package with a paid Developer ID, hardened runtime, and notarization.
 
-The zero-budget build uses a stable ad-hoc signature. After downloading it from GitHub, open Glossa once with **Control-click > Open**. A paid Developer ID can be supplied later through `CODESIGN_IDENTITY` for hardened-runtime signing and notarization.
+## Project map
 
-## Privacy
+```text
+Sources/Glossa   Native macOS application
+Tests            SwiftPM test suite
+Assets           App icon and menu-bar artwork
+script           Model, build, run, and packaging tools
+site             Next.js landing page for Vercel
+landing          Static landing-page reference
+```
 
-Audio frames are processed in memory and never saved by Glossa. WhisperKit transcribes on this Mac; Apple Translation uses local language packs. Glossa contains no OpenAI API integration or paid cloud dependency.
+## Project status
 
-If you configure a LibreTranslate fallback URL, translated text for unsupported pairs is sent to that endpoint. Use a local endpoint such as `http://127.0.0.1:5000` to keep that fallback on your own machine.
+Glossa is an early local-first preview intended for testing and GitHub distribution. Interfaces, model setup, and translation coverage are still evolving.
 
-## Project Structure
+See the [changelog](CHANGELOG.md) for shipped work and the [roadmap](ROADMAP.md) for what comes next. Bug reports and thoughtful feature requests are welcome in [GitHub Issues](https://github.com/rajin-khan/Glossa/issues).
 
-- `Sources/Glossa`: native macOS app source
-- `Assets`: app icon and menu-bar template mark
-- `site`: self-contained Next.js landing site for Vercel
-- `landing`: static promotional landing page reference
-- `script`: build, run, model prep, and release packaging scripts
-- `Tests`: SwiftPM test suite
-
-## Status
-
-Glossa is an early local-first build intended for private testing and GitHub distribution. See [CHANGELOG.md](CHANGELOG.md) for shipped milestones and [ROADMAP.md](ROADMAP.md) for planned work.
+<p align="center">
+  Built for macOS with SwiftUI, ScreenCaptureKit, Apple Translation, and WhisperKit.
+</p>
