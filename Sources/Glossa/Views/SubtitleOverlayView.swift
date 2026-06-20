@@ -2,16 +2,21 @@ import SwiftUI
 
 struct SubtitleOverlayView: View {
     @ObservedObject var store: GlossaStore
+    @State private var displayedSegment: TranscriptSegment?
+    @State private var isCaptionVisible = false
+    @State private var contentTask: Task<Void, Never>?
 
     var body: some View {
-        Group {
-            if let segment = store.currentSubtitle {
+        ZStack {
+            if let segment = displayedSegment {
                 subtitle(segment)
                     .id(segment.id)
-                    .transition(.opacity.combined(with: .scale(scale: 0.965)))
+                    .opacity(isCaptionVisible ? 1 : 0)
+                    .scaleEffect(isCaptionVisible ? 1 : 0.985)
             } else {
                 listeningPlaceholder
-                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
+                    .opacity(store.currentSubtitle == nil ? 1 : 0)
+                    .scaleEffect(store.currentSubtitle == nil ? 1 : 0.94)
             }
         }
         .padding(.horizontal, horizontalPadding)
@@ -25,8 +30,18 @@ struct SubtitleOverlayView: View {
         }
         .padding(8)
         .preferredColorScheme(.dark)
-        .animation(.easeInOut(duration: 0.42), value: store.currentSubtitle?.id)
+        .animation(.easeInOut(duration: 0.20), value: isCaptionVisible)
+        .animation(.easeInOut(duration: 0.24), value: displayedSegment?.id)
         .animation(.easeInOut(duration: 0.36), value: store.overlayScale)
+        .onAppear {
+            synchronizeContent(to: store.currentSubtitle, animated: false)
+        }
+        .onChange(of: store.currentSubtitle?.id) { _, _ in
+            synchronizeContent(to: store.currentSubtitle, animated: true)
+        }
+        .onDisappear {
+            contentTask?.cancel()
+        }
     }
 
     private func subtitle(_ segment: TranscriptSegment) -> some View {
@@ -67,6 +82,57 @@ struct SubtitleOverlayView: View {
 
     private var cornerRadius: CGFloat {
         store.currentSubtitle == nil ? 999 : store.overlayComputedCornerRadius
+    }
+
+    private func synchronizeContent(to segment: TranscriptSegment?, animated: Bool) {
+        contentTask?.cancel()
+
+        guard animated else {
+            displayedSegment = segment
+            isCaptionVisible = segment != nil
+            return
+        }
+
+        if let segment {
+            contentTask = Task {
+                await MainActor.run {
+                    withAnimation(.easeInOut(duration: 0.16)) {
+                        isCaptionVisible = false
+                    }
+                }
+
+                try? await Task.sleep(for: .milliseconds(170))
+                guard !Task.isCancelled else { return }
+
+                await MainActor.run {
+                    displayedSegment = segment
+                }
+
+                try? await Task.sleep(for: .milliseconds(180))
+                guard !Task.isCancelled else { return }
+
+                await MainActor.run {
+                    withAnimation(.easeInOut(duration: 0.20)) {
+                        isCaptionVisible = true
+                    }
+                }
+            }
+        } else {
+            contentTask = Task {
+                await MainActor.run {
+                    withAnimation(.easeInOut(duration: 0.16)) {
+                        isCaptionVisible = false
+                    }
+                }
+
+                try? await Task.sleep(for: .milliseconds(170))
+                guard !Task.isCancelled else { return }
+
+                await MainActor.run {
+                    displayedSegment = nil
+                }
+            }
+        }
     }
 }
 

@@ -74,7 +74,7 @@ final class SubtitleOverlayController {
         let rect = targetRect(for: store, resetPosition: false)
         if animated {
             NSAnimationContext.runAnimationGroup { context in
-                context.duration = store.currentSubtitle == nil ? 0.48 : 0.40
+                context.duration = store.currentSubtitle == nil ? 0.28 : 0.34
                 context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
                 panel.animator().setFrame(rect, display: true)
             }

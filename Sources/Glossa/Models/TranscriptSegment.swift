@@ -1,6 +1,6 @@
 import Foundation
 
-struct TranscriptSegment: Identifiable, Equatable {
+struct TranscriptSegment: Identifiable, Equatable, Sendable {
     let id = UUID()
     var sourceText: String
     var translatedText: String

@@ -265,14 +265,12 @@ final class GlossaStore: ObservableObject {
         captureMetrics = .idle
         hasLoggedAudioFlow = false
         listeningState = .idle
-        retireActiveSubtitle(after: .seconds(2.8))
+        clearActiveSubtitle()
     }
 
     func clearTranscript() {
-        activeSubtitleClearTask?.cancel()
         recentSegments.removeAll()
-        activeSubtitle = nil
-        notifyOverlayAppearanceChanged()
+        clearActiveSubtitle()
     }
 
     func setOverlayVisibilityHandler(_ handler: @escaping (Bool) -> Void) {
@@ -422,7 +420,7 @@ final class GlossaStore: ObservableObject {
                 GlossaLog.capture.error("Capture failed: \(error.localizedDescription, privacy: .public)")
                 transcriptionStatus = transcriptionService.stop()
                 listeningState = .failed(error.localizedDescription)
-                retireActiveSubtitle(after: .seconds(2.8))
+                clearActiveSubtitle()
             }
         }
     }
@@ -488,7 +486,13 @@ final class GlossaStore: ObservableObject {
             recentSegments.removeFirst(recentSegments.count - 12)
         }
         notifyOverlayAppearanceChanged()
-        retireActiveSubtitle(after: .seconds(5.5), matching: segment.id)
+        retireActiveSubtitle(after: .seconds(2.6), matching: segment.id)
+    }
+
+    private func clearActiveSubtitle() {
+        activeSubtitleClearTask?.cancel()
+        activeSubtitle = nil
+        notifyOverlayAppearanceChanged()
     }
 
     private func retireActiveSubtitle(
