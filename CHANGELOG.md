@@ -2,6 +2,25 @@
 
 All notable changes to Glossa are tracked here.
 
+## 0.1.4 - 2026-06-21
+
+### Added
+
+- First-run onboarding for permissions, local speech model setup, and preview listening.
+- Help menu command for reopening the onboarding flow.
+- DMG packaging with a drag-to-Applications installer layout alongside the zip archive.
+
+### Fixed
+
+- Microphone buffer capture now handles interleaved and planar channel layouts safely.
+- Microphone tap work now keeps analysis and UI relay work off the Core Audio callback path.
+
+### Verified
+
+- `swift test`
+- Microphone smoke launch with audible speech input stayed alive after the previous crash window.
+- Release package build, code-signature verification, DMG verification, and checksum generation.
+
 ## 0.1.3 - 2026-06-21
 
 ### Changed

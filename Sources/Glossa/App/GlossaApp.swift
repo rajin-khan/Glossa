@@ -4,6 +4,8 @@ import SwiftUI
 struct GlossaApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = GlossaStore()
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @State private var isShowingOnboarding = false
 
     var body: some Scene {
         WindowGroup("Glossa", id: "main") {
@@ -12,6 +14,16 @@ struct GlossaApp: App {
                 .preferredColorScheme(.dark)
                 .onAppear {
                     appDelegate.configure(store: store)
+                    showOnboardingIfNeeded()
+                }
+                .sheet(isPresented: $isShowingOnboarding, onDismiss: {
+                    hasCompletedOnboarding = true
+                }) {
+                    OnboardingView(store: store) {
+                        hasCompletedOnboarding = true
+                        isShowingOnboarding = false
+                    }
+                    .preferredColorScheme(.dark)
                 }
         }
         .defaultSize(width: 960, height: 680)
@@ -28,11 +40,24 @@ struct GlossaApp: App {
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
             }
+
+            CommandGroup(after: .help) {
+                Button("Show Glossa Onboarding") {
+                    isShowingOnboarding = true
+                }
+            }
         }
 
         Settings {
             SettingsView(store: store)
                 .preferredColorScheme(.dark)
+        }
+    }
+
+    private func showOnboardingIfNeeded() {
+        guard !hasCompletedOnboarding else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            isShowingOnboarding = true
         }
     }
 }
