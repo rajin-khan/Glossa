@@ -15,6 +15,14 @@ struct MainPanelView: View {
                         activePermissionBanner
                     }
 
+                    if let runtimeIssue {
+                        RuntimeIssueBanner(issue: runtimeIssue)
+                    }
+
+                    if showsModelSetup {
+                        modelSetupBanner
+                    }
+
                     LiveSubtitleSurface(store: store)
                     recentTranscript
                     diagnostics
@@ -60,7 +68,7 @@ struct MainPanelView: View {
                 .frame(height: 22)
 
             Picker("Translate to", selection: $store.targetLanguage) {
-                ForEach(TranslationLanguage.supported) { language in
+                ForEach(store.availableTargetLanguages) { language in
                     Text("\(language.name) · \(language.nativeName)")
                         .tag(language)
                 }
@@ -189,6 +197,104 @@ struct MainPanelView: View {
         }
     }
 
+    private var showsModelSetup: Bool {
+        guard store.transcriptionProvider == .whisperKit else { return false }
+        return switch store.localModelStatus {
+        case .notPrepared, .downloading, .loading:
+            true
+        case .downloaded, .ready, .unavailable, .failed:
+            false
+        }
+    }
+
+    private var modelSetupBanner: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "cpu")
+                .font(.title3)
+                .foregroundStyle(.teal)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(modelSetupTitle)
+                    .font(.callout.weight(.semibold))
+                Text("Glossa uses a free multilingual speech model that stays on this Mac.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if let progress = store.localModelStatus.progress {
+                    ProgressView(value: progress)
+                        .progressViewStyle(.linear)
+                        .frame(maxWidth: 260)
+                }
+            }
+
+            Spacer()
+
+            Button(store.localModelStatus.preparationActionTitle) {
+                store.prepareLocalModel()
+            }
+            .disabled(!store.localModelStatus.canPrepare)
+        }
+        .padding(14)
+        .background(.teal.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(.teal.opacity(0.20))
+        }
+    }
+
+    private var modelSetupTitle: String {
+        switch store.localModelStatus {
+        case .notPrepared:
+            "One-time speech model setup"
+        case .downloading:
+            "Downloading speech model"
+        case .loading:
+            "Preparing speech model"
+        case .downloaded, .ready, .unavailable, .failed:
+            "Local speech model"
+        }
+    }
+
+    private var runtimeIssue: RuntimeIssue? {
+        if case .failed(let message) = store.listeningState {
+            return RuntimeIssue(
+                title: "Listening stopped",
+                detail: message,
+                actionTitle: "Try Again",
+                action: store.startListening
+            )
+        }
+
+        if case .failed(let message) = store.localModelStatus {
+            return RuntimeIssue(
+                title: "Speech model needs attention",
+                detail: message,
+                actionTitle: "Try Again",
+                action: store.prepareLocalModel
+            )
+        }
+
+        if case .failed(let message) = store.transcriptionStatus {
+            return RuntimeIssue(
+                title: "Transcription stopped",
+                detail: message,
+                actionTitle: "Restart",
+                action: store.startListening
+            )
+        }
+
+        switch store.translationBroker.status {
+        case .failed(let message), .unavailable(let message):
+            return RuntimeIssue(
+                title: "Translation unavailable",
+                detail: message,
+                actionTitle: nil,
+                action: nil
+            )
+        case .idle, .preparing, .ready, .translating:
+            return nil
+        }
+    }
+
     private var permissionTitle: String {
         store.captureMode == .systemAudio ? "System audio access required" : "Microphone access required"
     }
@@ -207,6 +313,47 @@ struct MainPanelView: View {
             "mic"
         case .preview:
             "play.rectangle"
+        }
+    }
+}
+
+private struct RuntimeIssue {
+    let title: String
+    let detail: String
+    let actionTitle: String?
+    let action: (() -> Void)?
+}
+
+private struct RuntimeIssueBanner: View {
+    let issue: RuntimeIssue
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.title3)
+                .foregroundStyle(.red)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(issue.title)
+                    .font(.callout.weight(.semibold))
+                Text(issue.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+            }
+
+            Spacer()
+
+            if let actionTitle = issue.actionTitle,
+               let action = issue.action {
+                Button(actionTitle, action: action)
+            }
+        }
+        .padding(14)
+        .background(.red.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(.red.opacity(0.20))
         }
     }
 }
@@ -273,7 +420,8 @@ private struct LiveSubtitleSurface: View {
     }
 
     private var sourceText: String? {
-        guard let segment = store.currentSubtitle,
+        guard store.showsSourceText,
+              let segment = store.currentSubtitle,
               segment.sourceText != segment.translatedText
         else {
             return nil

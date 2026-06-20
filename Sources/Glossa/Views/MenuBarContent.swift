@@ -26,7 +26,7 @@ struct MenuBarContent: View {
         Divider()
 
         Picker("Translate To", selection: $store.targetLanguage) {
-            ForEach(TranslationLanguage.supported) { language in
+            ForEach(store.availableTargetLanguages) { language in
                 Text(language.name).tag(language)
             }
         }

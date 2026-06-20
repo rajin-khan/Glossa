@@ -31,7 +31,6 @@ struct GlossaApp: App {
 
         Settings {
             SettingsView(store: store)
-                .frame(width: 520)
         }
 
         MenuBarExtra {

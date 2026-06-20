@@ -43,4 +43,17 @@ enum LocalModelStatus: Equatable, Sendable {
             false
         }
     }
+
+    var preparationActionTitle: String {
+        switch self {
+        case .notPrepared:
+            "Download Model"
+        case .downloaded:
+            "Load Model"
+        case .failed:
+            "Try Again"
+        case .downloading, .loading, .ready, .unavailable:
+            "Prepare Model"
+        }
+    }
 }

@@ -31,13 +31,13 @@ struct SubtitleOverlayView: View {
     private func subtitle(_ segment: TranscriptSegment) -> some View {
         VStack(spacing: 7) {
             Text(segment.translatedText)
-                .font(.system(size: 29, weight: .semibold, design: .rounded))
+                .font(.system(size: store.overlayTextSize.fontSize, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
                 .minimumScaleFactor(0.72)
 
-            if segment.sourceText != segment.translatedText {
+            if store.showsSourceText, segment.sourceText != segment.translatedText {
                 Text(segment.sourceText)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(.white.opacity(0.68))

@@ -12,6 +12,10 @@ final class GlossaStore: ObservableObject {
     @Published var captureMode: CaptureMode = .systemAudio {
         didSet {
             defaults.set(captureMode.rawValue, forKey: DefaultsKey.captureMode)
+            guard oldValue != captureMode else { return }
+            if isListening {
+                stopListening()
+            }
         }
     }
 
@@ -36,6 +40,17 @@ final class GlossaStore: ObservableObject {
     @Published var pipelineStats: SubtitlePipelineStats = .idle
     @Published var transcriptionStatus: TranscriptionStatus = .idle
     @Published var localModelStatus: LocalModelStatus = .notPrepared
+    @Published private(set) var availableTargetLanguages = TranslationLanguage.supported
+    @Published var showsSourceText = true {
+        didSet {
+            defaults.set(showsSourceText, forKey: DefaultsKey.showsSourceText)
+        }
+    }
+    @Published var overlayTextSize: OverlayTextSize = .standard {
+        didSet {
+            defaults.set(overlayTextSize.rawValue, forKey: DefaultsKey.overlayTextSize)
+        }
+    }
 
     let translationBroker = TranslationRequestBroker()
 
@@ -60,9 +75,12 @@ final class GlossaStore: ObservableObject {
         let restoredTargetLanguage = Self.restoreTargetLanguage(from: defaults)
         let restoredCaptureMode = Self.restoreCaptureMode(from: defaults)
         let restoredProvider = Self.restoreTranscriptionProvider(from: defaults)
+        let restoredOverlayTextSize = Self.restoreOverlayTextSize(from: defaults)
         targetLanguage = restoredTargetLanguage
         captureMode = restoredCaptureMode
         self.transcriptionProvider = restoredProvider
+        showsSourceText = defaults.object(forKey: DefaultsKey.showsSourceText) as? Bool ?? true
+        overlayTextSize = restoredOverlayTextSize
         self.transcriptionService = transcriptionService ?? Self.makeTranscriptionService(for: restoredProvider)
         captureService.setMetricsHandler { [weak self] metrics in
             guard let self else { return }
@@ -154,6 +172,17 @@ final class GlossaStore: ObservableObject {
         permissions = await permissionService.snapshot()
     }
 
+    func refreshAvailableTargetLanguages() async {
+        let languages = await TranslationLanguageCatalog.supportedLanguages()
+        if languages.contains(where: { $0.code == targetLanguage.code }) {
+            availableTargetLanguages = languages
+        } else {
+            availableTargetLanguages = (languages + [targetLanguage]).sorted {
+                $0.name.localizedStandardCompare($1.name) == .orderedAscending
+            }
+        }
+    }
+
     func requestScreenRecordingPermission() async {
         permissions = await permissionService.requestScreenRecording()
     }
@@ -192,16 +221,26 @@ final class GlossaStore: ObservableObject {
 
         if arguments.contains("--smoke-microphone") {
             GlossaLog.app.info("Applying microphone smoke-test launch argument")
-            captureMode = .microphone
+            applyTransientCaptureMode(.microphone)
             startListening()
         } else if arguments.contains("--smoke-system-audio") {
             GlossaLog.app.info("Applying system-audio smoke-test launch argument")
-            captureMode = .systemAudio
+            applyTransientCaptureMode(.systemAudio)
             startListening()
         } else if arguments.contains("--preview-subtitles") {
             GlossaLog.app.info("Applying subtitle preview launch argument")
-            captureMode = .preview
+            applyTransientCaptureMode(.preview)
             startListening()
+        }
+    }
+
+    private func applyTransientCaptureMode(_ mode: CaptureMode) {
+        let persistedMode = defaults.string(forKey: DefaultsKey.captureMode)
+        captureMode = mode
+        if let persistedMode {
+            defaults.set(persistedMode, forKey: DefaultsKey.captureMode)
+        } else {
+            defaults.removeObject(forKey: DefaultsKey.captureMode)
         }
     }
 
@@ -318,13 +357,12 @@ final class GlossaStore: ObservableObject {
     }
 
     private static func restoreTargetLanguage(from defaults: UserDefaults) -> TranslationLanguage {
-        guard let code = defaults.string(forKey: DefaultsKey.targetLanguageCode),
-              let language = TranslationLanguage.supported.first(where: { $0.code == code })
-        else {
+        guard let code = defaults.string(forKey: DefaultsKey.targetLanguageCode) else {
             return TranslationLanguage.supported[0]
         }
 
-        return language
+        return TranslationLanguage.supported.first(where: { $0.code == code })
+            ?? TranslationLanguageCatalog.makeLanguage(identifier: code)
     }
 
     private static func restoreCaptureMode(from defaults: UserDefaults) -> CaptureMode {
@@ -347,6 +385,16 @@ final class GlossaStore: ObservableObject {
         return provider
     }
 
+    private static func restoreOverlayTextSize(from defaults: UserDefaults) -> OverlayTextSize {
+        guard let rawValue = defaults.string(forKey: DefaultsKey.overlayTextSize),
+              let size = OverlayTextSize(rawValue: rawValue)
+        else {
+            return .standard
+        }
+
+        return size
+    }
+
     private static func makeTranscriptionService(for provider: TranscriptionProviderKind) -> TranscriptionServing {
         switch provider {
         case .debug:
@@ -361,4 +409,6 @@ private enum DefaultsKey {
     static let targetLanguageCode = "targetLanguageCode"
     static let captureMode = "captureMode"
     static let transcriptionProvider = "transcriptionProvider"
+    static let showsSourceText = "showsSourceText"
+    static let overlayTextSize = "overlayTextSize"
 }

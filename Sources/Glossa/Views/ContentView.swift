@@ -4,6 +4,7 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var store: GlossaStore
     @State private var selection: WorkspaceSection? = .live
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         NavigationSplitView {
@@ -22,8 +23,13 @@ struct ContentView: View {
             }
         }
         .task {
+            let arguments = ProcessInfo.processInfo.arguments
             await store.refreshPermissions()
-            store.handleLaunchArguments(ProcessInfo.processInfo.arguments)
+            await store.refreshAvailableTargetLanguages()
+            store.handleLaunchArguments(arguments)
+            if arguments.contains("--open-settings") {
+                openSettings()
+            }
             if #unavailable(macOS 15.0) {
                 store.translationBroker.markUnavailable("Translation requires macOS 15")
             }

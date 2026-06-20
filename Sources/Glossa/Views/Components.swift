@@ -311,7 +311,7 @@ struct LocalModelPreparationView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Prepare Model") {
+                Button(store.localModelStatus.preparationActionTitle) {
                     store.prepareLocalModel()
                 }
                 .disabled(!store.localModelStatus.canPrepare)
