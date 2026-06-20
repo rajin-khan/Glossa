@@ -116,6 +116,6 @@ private struct ShimmeringOverlayMark: View {
     private var centeredMark: some View {
         GlossaMarkView(size: size)
             .frame(width: size, height: size, alignment: .center)
-            .offset(x: max(1, size * 0.045))
+            .offset(x: max(2, size * 0.10))
     }
 }
