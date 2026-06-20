@@ -2,6 +2,26 @@
 
 All notable changes to Glossa are tracked here.
 
+## 0.1.1 - 2026-06-21
+
+### Added
+
+- Appearance section in the main app and Settings for subtitle overlay tuning.
+- Single overlay scale control that adjusts subtitle text, source text, padding, height, width, corners, and transparency together.
+- Reset Position action for returning the floating subtitle overlay to the lower center of the screen.
+- Tiny shimmering bird standby state whenever the overlay is visible and no active subtitle is present.
+
+### Changed
+
+- The subtitle overlay now resizes per sentence, expanding horizontally first and then vertically only when needed.
+- Pausing or stopping listening keeps the overlay available and clears the active subtitle, returning it to the bird standby state.
+- Menu-bar applet and main app chrome were tightened for a calmer, more minimal workflow.
+- Overlay shadows were removed to avoid rectangular artifacts around the rounded subtitle surface.
+
+### Verified
+
+- SwiftPM test suite passes with overlay preference persistence and standby behavior coverage.
+
 ## 0.1.0 - 2026-06-20
 
 ### Added
