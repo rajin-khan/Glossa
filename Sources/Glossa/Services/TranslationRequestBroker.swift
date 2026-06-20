@@ -7,9 +7,14 @@ final class TranslationRequestBroker: ObservableObject {
 
     private var queue: [TranslationRequest] = []
     private var resultHandler: (@MainActor @Sendable (TranscriptSegment) -> Void)?
+    private var fallbackEndpoint: URL?
 
     func setResultHandler(_ handler: (@MainActor @Sendable (TranscriptSegment) -> Void)?) {
         resultHandler = handler
+    }
+
+    func configureFallback(endpoint: URL?) {
+        fallbackEndpoint = endpoint
     }
 
     func submit(event: TranscriptionEvent, targetLanguage: TranslationLanguage) {
@@ -78,6 +83,18 @@ final class TranslationRequestBroker: ObservableObject {
     func fail(requestID: UUID, message: String) {
         guard let request = currentRequest, request.id == requestID else { return }
 
+        if let fallbackEndpoint {
+            status = .preparing(target: request.targetLanguageName)
+            Task { [weak self] in
+                await self?.translateWithFallback(
+                    request: request,
+                    endpoint: fallbackEndpoint,
+                    appleFailureMessage: message
+                )
+            }
+            return
+        }
+
         resultHandler?(
             TranscriptSegment(
                 sourceText: request.sourceText,
@@ -90,6 +107,40 @@ final class TranslationRequestBroker: ObservableObject {
         status = .failed(message)
         GlossaLog.translation.error("Translation failed: \(message, privacy: .public)")
         advanceIfNeeded()
+    }
+
+    private func translateWithFallback(
+        request: TranslationRequest,
+        endpoint: URL,
+        appleFailureMessage: String
+    ) async {
+        guard currentRequest?.id == request.id else { return }
+
+        do {
+            status = .translating(target: request.targetLanguageName)
+            let translatedText = try await LibreTranslateClient.translate(
+                text: request.sourceText,
+                sourceLanguage: request.sourceLanguage,
+                targetLanguage: request.targetLanguageCode,
+                endpoint: endpoint
+            )
+            complete(requestID: request.id, translatedText: translatedText)
+        } catch {
+            guard currentRequest?.id == request.id else { return }
+
+            resultHandler?(
+                TranscriptSegment(
+                    sourceText: request.sourceText,
+                    translatedText: request.sourceText,
+                    sourceLanguage: request.sourceLanguage,
+                    isFinal: request.isFinal
+                )
+            )
+            currentRequest = nil
+            status = .failed("\(appleFailureMessage) Fallback failed: \(error.localizedDescription)")
+            GlossaLog.translation.error("Fallback translation failed: \(error.localizedDescription, privacy: .public)")
+            advanceIfNeeded()
+        }
     }
 
     func markUnavailable(_ message: String) {

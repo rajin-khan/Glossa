@@ -8,6 +8,7 @@
 - [x] Local multilingual WhisperKit transcription
 - [x] Automatic source-language detection
 - [x] Apple on-device translation and language-pack preparation
+- [x] Bangla target visibility and LibreTranslate-compatible fallback path
 - [x] Bilingual floating subtitle overlay
 - [x] Transcript history, permissions, model setup, and recovery UX
 - [x] App icon, release bundle, ZIP packaging, and checksums

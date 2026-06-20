@@ -7,7 +7,8 @@ Glossa is a native macOS menu-bar app that turns audio playing on your Mac into 
 - System-audio capture through ScreenCaptureKit
 - Microphone fallback through AVAudioEngine
 - Automatic source-language detection with local WhisperKit
-- Target languages discovered from Apple Translation on the current Mac
+- Target languages discovered from Apple Translation plus Glossa's promised targets, including Bangla
+- Optional LibreTranslate-compatible fallback endpoint for Bangla or other unsupported Apple pairs
 - Floating bilingual subtitle overlay across Spaces and full-screen apps
 - Menu-bar listen, language, capture, and overlay controls
 - Local transcript history and model/permission recovery UI
@@ -42,3 +43,5 @@ The zero-budget build uses a stable ad-hoc signature. After downloading it from 
 ## Privacy
 
 Audio frames are processed in memory and never saved by Glossa. WhisperKit transcribes on this Mac; Apple Translation uses local language packs. Glossa contains no OpenAI API integration or paid cloud dependency.
+
+If you configure a LibreTranslate fallback URL, translated text for unsupported pairs is sent to that endpoint. Use a local endpoint such as `http://127.0.0.1:5000` to keep that fallback on your own machine.

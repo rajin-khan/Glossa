@@ -36,7 +36,8 @@ struct GlossaApp: App {
         MenuBarExtra {
             MenuBarContent(store: store)
         } label: {
-            Label("Glossa", systemImage: store.isListening ? "captions.bubble.fill" : "captions.bubble")
+            BirdRibbonMarkView(size: 18, isMenuBar: true)
+                .accessibilityLabel("Glossa")
         }
         .menuBarExtraStyle(.menu)
     }

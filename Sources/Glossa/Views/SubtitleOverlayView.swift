@@ -50,9 +50,8 @@ struct SubtitleOverlayView: View {
 
     private var listeningPlaceholder: some View {
         HStack(spacing: 11) {
-            Image(systemName: store.isListening ? "waveform" : "captions.bubble")
-                .symbolEffect(.variableColor.iterative, isActive: store.isListening)
-                .foregroundStyle(.white.opacity(0.76))
+            BirdRibbonMarkView(size: 20)
+                .opacity(store.isListening ? 0.82 : 0.56)
 
             Text(store.isListening ? "Listening for speech…" : "Subtitles are ready")
                 .font(.system(size: 17, weight: .medium, design: .rounded))

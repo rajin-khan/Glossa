@@ -51,6 +51,12 @@ final class GlossaStore: ObservableObject {
             defaults.set(overlayTextSize.rawValue, forKey: DefaultsKey.overlayTextSize)
         }
     }
+    @Published var fallbackTranslationURLString = "" {
+        didSet {
+            defaults.set(fallbackTranslationURLString, forKey: DefaultsKey.fallbackTranslationURL)
+            translationBroker.configureFallback(endpoint: Self.fallbackTranslationURL(from: fallbackTranslationURLString))
+        }
+    }
 
     let translationBroker = TranslationRequestBroker()
 
@@ -81,6 +87,7 @@ final class GlossaStore: ObservableObject {
         self.transcriptionProvider = restoredProvider
         showsSourceText = defaults.object(forKey: DefaultsKey.showsSourceText) as? Bool ?? true
         overlayTextSize = restoredOverlayTextSize
+        fallbackTranslationURLString = defaults.string(forKey: DefaultsKey.fallbackTranslationURL) ?? ""
         self.transcriptionService = transcriptionService ?? Self.makeTranscriptionService(for: restoredProvider)
         captureService.setMetricsHandler { [weak self] metrics in
             guard let self else { return }
@@ -106,6 +113,7 @@ final class GlossaStore: ObservableObject {
         translationBroker.setResultHandler { [weak self] segment in
             self?.append(segment: segment)
         }
+        translationBroker.configureFallback(endpoint: Self.fallbackTranslationURL(from: fallbackTranslationURLString))
         recentSegments = []
     }
 
@@ -408,6 +416,12 @@ final class GlossaStore: ObservableObject {
             LocalWhisperTranscriptionService(modelName: "tiny")
         }
     }
+
+    private static func fallbackTranslationURL(from string: String) -> URL? {
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return URL(string: trimmed)
+    }
 }
 
 private enum DefaultsKey {
@@ -416,4 +430,5 @@ private enum DefaultsKey {
     static let transcriptionProvider = "transcriptionProvider"
     static let showsSourceText = "showsSourceText"
     static let overlayTextSize = "overlayTextSize"
+    static let fallbackTranslationURL = "fallbackTranslationURL"
 }

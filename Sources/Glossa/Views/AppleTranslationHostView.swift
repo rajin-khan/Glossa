@@ -41,7 +41,7 @@ struct AppleTranslationHostView: View {
                     guard availabilityStatus != .unsupported else {
                         broker.fail(
                             requestID: request.id,
-                            message: "This language pair is not supported by Apple Translation."
+                            message: "\(request.targetLanguageName) is not supported by Apple Translation for this source on this Mac. Add a LibreTranslate endpoint in Settings for Bangla or other unsupported pairs."
                         )
                         return
                     }

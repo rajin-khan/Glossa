@@ -61,6 +61,15 @@ private struct GeneralSettingsView: View {
                 LabeledContent("Source Language", value: "Detect automatically")
             }
 
+            Section("Bangla Fallback") {
+                TextField("LibreTranslate URL", text: $store.fallbackTranslationURLString)
+                    .textFieldStyle(.roundedBorder)
+
+                Text("Bangla stays in Glossa even when Apple Translation does not support a pair. Add a local or bring-your-own LibreTranslate endpoint to translate unsupported pairs without OpenAI.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Listening") {
                 Picker("Capture Source", selection: $store.captureMode) {
                     ForEach(CaptureMode.allCases) { mode in
@@ -122,7 +131,7 @@ private struct PrivacySettingsView: View {
         Form {
             Section("Local by Default") {
                 LabeledContent("Speech Recognition", value: "WhisperKit on this Mac")
-                LabeledContent("Translation", value: "Apple Translation")
+                LabeledContent("Translation", value: "Apple first, fallback optional")
                 LabeledContent("Audio Storage", value: "Never stored")
                 LabeledContent("Account or API Key", value: "Not required")
             }

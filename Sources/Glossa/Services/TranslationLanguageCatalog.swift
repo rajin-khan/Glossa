@@ -14,9 +14,7 @@ enum TranslationLanguageCatalog {
                 makeLanguage(identifier: language.minimalIdentifier)
             }
             let unique = Dictionary(mapped.map { ($0.code, $0) }, uniquingKeysWith: { first, _ in first })
-            let sorted = unique.values.sorted {
-                $0.name.localizedStandardCompare($1.name) == .orderedAscending
-            }
+            let sorted = mergedSupportedLanguages(dynamicLanguages: Array(unique.values))
             if !sorted.isEmpty {
                 return sorted
             }
@@ -24,6 +22,14 @@ enum TranslationLanguageCatalog {
         #endif
 
         return TranslationLanguage.supported
+    }
+
+    static func mergedSupportedLanguages(dynamicLanguages: [TranslationLanguage]) -> [TranslationLanguage] {
+        let merged = dynamicLanguages + TranslationLanguage.supported
+        let unique = Dictionary(merged.map { ($0.code, $0) }, uniquingKeysWith: { first, _ in first })
+        return unique.values.sorted {
+            $0.name.localizedStandardCompare($1.name) == .orderedAscending
+        }
     }
 
     static func makeLanguage(identifier: String, displayLocale: Locale = .current) -> TranslationLanguage {

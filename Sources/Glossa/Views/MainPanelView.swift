@@ -6,6 +6,7 @@ struct MainPanelView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            brandHeader
             sessionControls
             Divider()
 
@@ -32,7 +33,7 @@ struct MainPanelView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .navigationTitle("Live Subtitles")
+        .navigationTitle("Glossa")
         .toolbar {
             ToolbarItemGroup {
                 Button {
@@ -77,8 +78,6 @@ struct MainPanelView: View {
 
             Spacer()
 
-            ListeningBadge(state: store.listeningState)
-
             Button {
                 store.toggleListening()
             } label: {
@@ -95,6 +94,36 @@ struct MainPanelView: View {
         .padding(.vertical, 14)
     }
 
+    private var brandHeader: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(.black.opacity(0.72))
+                BirdRibbonMarkView(size: 42)
+            }
+            .frame(width: 58, height: 58)
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(.white.opacity(0.10))
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Glossa")
+                    .font(.title2.weight(.semibold))
+                Text("Carries live speech as a ribbon of translated captions.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            ListeningBadge(state: store.listeningState)
+        }
+        .padding(18)
+        .background(.ultraThinMaterial)
+        .background(.black.opacity(0.28))
+    }
+
     private var recentTranscript: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -107,12 +136,7 @@ struct MainPanelView: View {
             }
 
             if store.recentSegments.isEmpty {
-                ContentUnavailableView(
-                    "No Transcript Yet",
-                    systemImage: "text.bubble",
-                    description: Text("Translated lines will collect here while Glossa listens.")
-                )
-                .frame(maxWidth: .infinity, minHeight: 150)
+                EmptyTranscriptView()
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(store.recentSegments.suffix(4).reversed().enumerated()), id: \.element.id) { index, segment in
@@ -234,10 +258,10 @@ struct MainPanelView: View {
             .disabled(!store.localModelStatus.canPrepare)
         }
         .padding(14)
-        .background(.teal.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+        .background(.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 8))
         .overlay {
             RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(.teal.opacity(0.20))
+                .strokeBorder(.white.opacity(0.12))
         }
     }
 
@@ -314,6 +338,21 @@ struct MainPanelView: View {
         case .preview:
             "play.rectangle"
         }
+    }
+}
+
+private struct EmptyTranscriptView: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            BirdRibbonMarkView(size: 42)
+                .opacity(0.42)
+            Text("No Ribbon Yet")
+                .font(.title3.weight(.semibold))
+            Text("Translated lines will land here while Glossa listens.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 150)
     }
 }
 
@@ -408,6 +447,7 @@ private struct LiveSubtitleSurface: View {
         .padding(24)
         .frame(maxWidth: .infinity, minHeight: 260)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+        .background(.black.opacity(0.20), in: RoundedRectangle(cornerRadius: 8))
         .overlay {
             RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(.separator.opacity(0.45))
