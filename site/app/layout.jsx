@@ -8,13 +8,13 @@ const siteUrl =
 
 export const metadata = {
   metadataBase: new URL(siteUrl),
-  title: "Glossa - Live translated subtitles for macOS",
+  title: "Glossa - Live translated subtitles for Mac audio",
   description:
-    "Glossa is a native macOS menu-bar app for local, live translated subtitles from your system audio.",
+    "Glossa is a native macOS menu-bar app for local live subtitles from system audio on Apple Silicon Macs running macOS 15 Sequoia or newer.",
   openGraph: {
     title: "Glossa",
     description:
-      "Live captions from your Mac audio, privately translated into the language you choose.",
+      "Live translated subtitles from Mac audio, with local transcription and menu-bar controls.",
     images: ["/glossa-app-icon.png"]
   },
   icons: {

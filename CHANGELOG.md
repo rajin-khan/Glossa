@@ -17,6 +17,7 @@ All notable changes to Glossa are tracked here.
 - Local transcript history, permission recovery, model setup, and diagnostics.
 - Release packaging script for an ad-hoc signed `.app`, ZIP archive, and SHA-256 checksum.
 - Self-contained Next.js landing site in `site/` for Vercel deployment.
+- Responsive landing-page redesign with multilingual subtitle previews and a refined macOS product mockup.
 
 ### Verified
 
