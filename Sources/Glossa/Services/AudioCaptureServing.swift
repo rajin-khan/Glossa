@@ -13,6 +13,7 @@ enum AudioCaptureError: LocalizedError {
     case noShareableDisplay
     case screenRecordingPermissionRequired
     case microphonePermissionRequired
+    case invalidMicrophoneInput
     case unsupportedMode
 
     var errorDescription: String? {
@@ -25,6 +26,8 @@ enum AudioCaptureError: LocalizedError {
             "Enable Glossa in Screen & System Audio Recording, then restart Glossa and start listening again."
         case .microphonePermissionRequired:
             "Microphone capture needs microphone permission. Grant it in the permission panel, then start listening again."
+        case .invalidMicrophoneInput:
+            "Glossa could not read a valid microphone input format from the current input device."
         case .unsupportedMode:
             "This capture mode is not available yet."
         }

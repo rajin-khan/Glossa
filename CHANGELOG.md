@@ -2,6 +2,24 @@
 
 All notable changes to Glossa are tracked here.
 
+## 0.1.2 - 2026-06-21
+
+### Fixed
+
+- Microphone capture no longer crashes when the AVAudioEngine tap delivers buffers on Core Audio's realtime queue.
+- Microphone startup now validates the current input format before installing the tap.
+
+### Changed
+
+- Capture failures now keep the subtitle overlay available and return it to the tiny standby mark instead of hiding the overlay.
+- The standby overlay mark now uses a diagonal sheen animation instead of a simple fade pulse.
+- The menu-bar applet is slightly smaller and tighter while keeping start, overlay, language, capture, and settings controls available.
+
+### Verified
+
+- `swift test`
+- Microphone smoke launch stays alive after the previous crash window.
+
 ## 0.1.1 - 2026-06-21
 
 ### Added
@@ -48,3 +66,29 @@ All notable changes to Glossa are tracked here.
 
 - Glossa is free to develop and local-first. It contains no OpenAI API integration or paid cloud dependency.
 - The current release uses ad-hoc signing for zero-budget GitHub distribution. Users should open the app once with **Control-click > Open**.
+
+## Pre-1.0 Milestones
+
+### Preview Stabilization
+
+- [ ] Keep system-audio and microphone capture stable across macOS 15 and current macOS beta builds.
+- [ ] Add a repeatable smoke-test script for microphone, system audio, overlay standby, and preview mode.
+- [ ] Improve first-run recovery when permissions or local model files are missing.
+
+### Translation Quality
+
+- [ ] Tune speech chunking for shorter captions and lower latency.
+- [ ] Offer local model size choices after the tiny model path is stable.
+- [ ] Make LibreTranslate fallback setup clearer for self-hosted users.
+
+### Distribution
+
+- [ ] Add a signed and notarized build when funding allows a paid Apple Developer account.
+- [ ] Add downloadable screenshots and a short demo video.
+- [ ] Publish a clearer compatibility table by Mac model and macOS version after more testing.
+
+### Public Launch
+
+- [ ] Confirm privacy copy with real fallback behavior.
+- [ ] Add issue templates for crash reports, language coverage, and capture bugs.
+- [ ] Move from preview release notes to a stable support policy.

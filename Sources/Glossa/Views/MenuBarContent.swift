@@ -7,7 +7,7 @@ struct MenuBarContent: View {
     var openSettingsWindow: () -> Void = { }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             header
 
             HStack(spacing: 8) {
@@ -71,10 +71,10 @@ struct MenuBarContent: View {
                     .pickerStyle(.segmented)
                 }
             }
-            .padding(10)
-            .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 14))
+            .padding(9)
+            .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 13))
             .overlay {
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 13)
                     .strokeBorder(.white.opacity(0.09))
             }
 
@@ -87,8 +87,8 @@ struct MenuBarContent: View {
             appearanceStrip
             footer
         }
-        .padding(14)
-        .frame(width: 332)
+        .padding(12)
+        .frame(width: 316)
         .background {
             ZStack {
                 Color.glossaInk
@@ -108,9 +108,9 @@ struct MenuBarContent: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            GlossaAppIconView(size: 40)
+            GlossaAppIconView(size: 36)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("Glossa")
                     .font(.headline.weight(.semibold))
                 Text(statusText)
@@ -149,11 +149,11 @@ struct MenuBarContent: View {
                     .lineLimit(2)
             }
         }
-        .padding(14)
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 13))
         .overlay {
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 13)
                 .strokeBorder(.white.opacity(0.12))
         }
     }

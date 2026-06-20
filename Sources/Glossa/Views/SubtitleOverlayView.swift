@@ -71,16 +71,50 @@ struct SubtitleOverlayView: View {
 
 private struct ShimmeringOverlayMark: View {
     let size: CGFloat
-    @State private var isLit = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var sheenPosition: CGFloat = -1
 
     var body: some View {
-        GlossaMarkView(size: size)
-            .opacity(isLit ? 0.86 : 0.44)
-            .scaleEffect(isLit ? 1.04 : 0.96)
-            .onAppear {
-                withAnimation(.easeInOut(duration: 1.35).repeatForever(autoreverses: true)) {
-                    isLit = true
-                }
+        ZStack {
+            centeredMark
+                .opacity(0.72)
+
+            if !reduceMotion {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                .clear,
+                                .white.opacity(0.08),
+                                .white.opacity(0.92),
+                                .white.opacity(0.12),
+                                .clear
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: max(8, size * 0.34), height: size * 2.4)
+                    .rotationEffect(.degrees(28))
+                    .offset(x: sheenPosition * size * 1.55)
+                    .blendMode(.screen)
+                    .mask(centeredMark)
             }
+        }
+        .frame(width: size, height: size)
+        .drawingGroup(opaque: false)
+        .accessibilityHidden(true)
+        .onAppear {
+            guard !reduceMotion else { return }
+            sheenPosition = -1
+            withAnimation(.linear(duration: 1.55).repeatForever(autoreverses: false)) {
+                sheenPosition = 1
+            }
+        }
+    }
+
+    private var centeredMark: some View {
+        GlossaMarkView(size: size)
+            .frame(width: size, height: size, alignment: .center)
     }
 }

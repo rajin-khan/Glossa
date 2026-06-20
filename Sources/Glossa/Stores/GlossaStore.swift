@@ -420,8 +420,8 @@ final class GlossaStore: ObservableObject {
                 GlossaLog.capture.error("Capture failed: \(error.localizedDescription, privacy: .public)")
                 transcriptionStatus = transcriptionService.stop()
                 listeningState = .failed(error.localizedDescription)
-                overlayVisible = false
-                overlayVisibilityHandler?(false)
+                activeSubtitle = nil
+                notifyOverlayAppearanceChanged()
             }
         }
     }

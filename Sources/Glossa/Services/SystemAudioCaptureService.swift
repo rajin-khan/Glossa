@@ -16,6 +16,7 @@ final class SystemAudioCaptureService: NSObject, AudioCaptureServing {
     private let sampleQueue = DispatchQueue(label: "com.rajin.glossa.audio-samples")
     private var stream: SCStream?
     private var audioEngine: AVAudioEngine?
+    private var microphoneTapHandler: MicrophoneTapHandler?
     private var bufferCount = 0
     #endif
 
@@ -89,28 +90,31 @@ final class SystemAudioCaptureService: NSObject, AudioCaptureServing {
         let engine = AVAudioEngine()
         let inputNode = engine.inputNode
         let format = inputNode.outputFormat(forBus: 0)
-        let telemetryRelay = telemetryRelay
-        let frameRelay = frameRelay
-        let tapProbe = AudioTapProbe()
+
+        guard format.sampleRate > 0, format.channelCount > 0 else {
+            throw AudioCaptureError.invalidMicrophoneInput
+        }
+
+        let tapHandler = MicrophoneTapHandler(
+            telemetryRelay: telemetryRelay,
+            frameRelay: frameRelay
+        )
 
         GlossaLog.capture.info(
             "Microphone input format rate=\(format.sampleRate, privacy: .public) channels=\(format.channelCount, privacy: .public)"
         )
 
-        inputNode.installTap(onBus: 0, bufferSize: 2_048, format: format) { buffer, _ in
-            let analysis = MicrophoneBufferAnalyzer.analysis(from: buffer)
-            tapProbe.recordFirstBuffer(
-                frameLength: Int(buffer.frameLength),
-                hasAnalysis: analysis != nil
-            )
-            guard let analysis else { return }
-            telemetryRelay.emit(analysis.metrics)
-            frameRelay.emit(analysis.frame)
-        }
+        inputNode.installTap(
+            onBus: 0,
+            bufferSize: 2_048,
+            format: format,
+            block: tapHandler.makeTapBlock()
+        )
 
         engine.prepare()
         try engine.start()
         audioEngine = engine
+        microphoneTapHandler = tapHandler
         #else
         throw AudioCaptureError.unsupportedMode
         #endif
@@ -122,6 +126,7 @@ final class SystemAudioCaptureService: NSObject, AudioCaptureServing {
         audioEngine.inputNode.removeTap(onBus: 0)
         audioEngine.stop()
         self.audioEngine = nil
+        microphoneTapHandler = nil
         #endif
     }
 }
@@ -326,6 +331,34 @@ private final class AudioTapProbe: @unchecked Sendable {
         GlossaLog.capture.info(
             "Received first microphone tap buffer frames=\(frameLength, privacy: .public) analyzed=\(hasAnalysis, privacy: .public)"
         )
+    }
+}
+
+private final class MicrophoneTapHandler: @unchecked Sendable {
+    private let telemetryRelay: AudioCaptureTelemetryRelay
+    private let frameRelay: AudioFrameRelay
+    private let tapProbe = AudioTapProbe()
+
+    init(telemetryRelay: AudioCaptureTelemetryRelay, frameRelay: AudioFrameRelay) {
+        self.telemetryRelay = telemetryRelay
+        self.frameRelay = frameRelay
+    }
+
+    func makeTapBlock() -> AVAudioNodeTapBlock {
+        { [self] buffer, _ in
+            receive(buffer)
+        }
+    }
+
+    func receive(_ buffer: AVAudioPCMBuffer) {
+        let analysis = MicrophoneBufferAnalyzer.analysis(from: buffer)
+        tapProbe.recordFirstBuffer(
+            frameLength: Int(buffer.frameLength),
+            hasAnalysis: analysis != nil
+        )
+        guard let analysis else { return }
+        telemetryRelay.emit(analysis.metrics)
+        frameRelay.emit(analysis.frame)
     }
 }
 #endif
