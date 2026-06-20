@@ -16,32 +16,30 @@ struct SubtitleOverlayView: View {
         .padding(.horizontal, horizontalPadding)
         .padding(.vertical, verticalPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: store.overlayCornerRadius))
-        .background(.black.opacity(store.overlayBackgroundOpacity), in: RoundedRectangle(cornerRadius: store.overlayCornerRadius))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
+        .background(.black.opacity(store.overlayComputedBackgroundOpacity), in: RoundedRectangle(cornerRadius: cornerRadius))
         .overlay {
-            RoundedRectangle(cornerRadius: store.overlayCornerRadius)
+            RoundedRectangle(cornerRadius: cornerRadius)
                 .strokeBorder(.white.opacity(0.12))
         }
-        .shadow(color: .black.opacity(0.34), radius: 20, y: 8)
         .padding(8)
         .preferredColorScheme(.dark)
         .animation(.snappy(duration: 0.2), value: store.currentSubtitle?.id)
-        .animation(.snappy(duration: 0.18), value: store.overlayFontSize)
-        .animation(.snappy(duration: 0.18), value: store.overlayBackgroundOpacity)
+        .animation(.snappy(duration: 0.18), value: store.overlayScale)
     }
 
     private func subtitle(_ segment: TranscriptSegment) -> some View {
         VStack(spacing: sourceSpacing) {
             Text(segment.translatedText)
-                .font(.system(size: store.overlayFontSize, weight: .semibold, design: store.overlayFontStyle.design))
+                .font(.system(size: store.overlayPrimaryFontSize, weight: .semibold, design: store.overlayFontStyle.design))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-                .lineLimit(3)
+                .lineLimit(2)
                 .minimumScaleFactor(0.72)
 
             if store.showsSourceText, segment.sourceText != segment.translatedText {
                 Text(segment.sourceText)
-                    .font(.system(size: max(12, store.overlayFontSize * 0.48), weight: .medium, design: store.overlayFontStyle.design))
+                    .font(.system(size: store.overlaySourceFontSize, weight: .medium, design: store.overlayFontStyle.design))
                     .foregroundStyle(.white.opacity(0.68))
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
@@ -51,39 +49,38 @@ struct SubtitleOverlayView: View {
     }
 
     private var listeningPlaceholder: some View {
-        HStack(spacing: 11) {
-            GlossaMarkView(size: 24)
-                .opacity(store.isListening ? 0.82 : 0.56)
-
-            Text(store.isListening ? "Listening for speech…" : "Subtitles are ready")
-                .font(.system(size: max(11, store.overlayFontSize * 0.58), weight: .medium, design: store.overlayFontStyle.design))
-                .foregroundStyle(.white.opacity(0.82))
-        }
+        ShimmeringOverlayMark(size: store.overlayEmptyMarkSize)
     }
 
     private var horizontalPadding: CGFloat {
-        switch store.overlayTextSize {
-        case .compact:
-            14
-        case .standard:
-            28
-        case .large:
-            34
-        }
+        store.currentSubtitle == nil ? 8 : store.overlayHorizontalPadding
     }
 
     private var verticalPadding: CGFloat {
-        switch store.overlayTextSize {
-        case .compact:
-            8
-        case .standard:
-            17
-        case .large:
-            22
-        }
+        store.currentSubtitle == nil ? 8 : store.overlayVerticalPadding
     }
 
     private var sourceSpacing: CGFloat {
-        store.overlayTextSize == .compact ? 4 : 7
+        CGFloat(4 + store.overlayScale * 4)
+    }
+
+    private var cornerRadius: CGFloat {
+        store.currentSubtitle == nil ? 999 : store.overlayComputedCornerRadius
+    }
+}
+
+private struct ShimmeringOverlayMark: View {
+    let size: CGFloat
+    @State private var isLit = false
+
+    var body: some View {
+        GlossaMarkView(size: size)
+            .opacity(isLit ? 0.86 : 0.44)
+            .scaleEffect(isLit ? 1.04 : 0.96)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 1.35).repeatForever(autoreverses: true)) {
+                    isLit = true
+                }
+            }
     }
 }

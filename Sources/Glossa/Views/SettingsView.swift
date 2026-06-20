@@ -110,55 +110,21 @@ struct AppearanceSettingsView: View {
             Section("Typography") {
                 Toggle("Show original speech below translation", isOn: $store.showsSourceText)
 
-                Picker("Preset", selection: $store.overlayTextSize) {
-                    ForEach(OverlayTextSize.allCases) { size in
-                        Text(size.title).tag(size)
-                    }
-                }
-                .pickerStyle(.segmented)
-
-                Picker("Font", selection: $store.overlayFontStyle) {
-                    ForEach(OverlayFontStyle.allCases) { style in
-                        Text(style.title).tag(style)
-                    }
-                }
-                .pickerStyle(.segmented)
-
                 SliderRow(
-                    title: "Subtitle Size",
-                    value: $store.overlayFontSize,
-                    range: 12...44,
-                    step: 1,
-                    valueLabel: "\(Int(store.overlayFontSize)) pt"
+                    title: "Overlay Scale",
+                    value: $store.overlayScale,
+                    range: 0.20...1.35,
+                    step: 0.01,
+                    valueLabel: scaleLabel
                 )
+
+                Text("Scale controls subtitle size, source text, padding, height, width, corners, and transparency together.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Floating Window") {
                 LabeledContent("Visibility", value: store.overlayVisible ? "Shown" : "Hidden")
-
-                SliderRow(
-                    title: "Window Width",
-                    value: $store.overlayWidthFraction,
-                    range: 0.25...0.88,
-                    step: 0.01,
-                    valueLabel: "\(Int(store.overlayWidthFraction * 100))%"
-                )
-
-                SliderRow(
-                    title: "Background",
-                    value: $store.overlayBackgroundOpacity,
-                    range: 0.03...0.78,
-                    step: 0.01,
-                    valueLabel: "\(Int(store.overlayBackgroundOpacity * 100))%"
-                )
-
-                SliderRow(
-                    title: "Corners",
-                    value: $store.overlayCornerRadius,
-                    range: 6...30,
-                    step: 1,
-                    valueLabel: "\(Int(store.overlayCornerRadius)) px"
-                )
 
                 HStack {
                     Button(store.overlayVisible ? "Hide Overlay" : "Show Overlay") {
@@ -191,6 +157,10 @@ struct AppearanceSettingsView: View {
         .formStyle(.grouped)
         .padding(.horizontal, 12)
     }
+
+    private var scaleLabel: String {
+        "\(Int(store.overlayScale * 100))% · \(Int(store.overlayPrimaryFontSize)) pt"
+    }
 }
 
 private struct SliderRow: View {
@@ -220,22 +190,22 @@ private struct OverlayPreviewCard: View {
     var body: some View {
         VStack(spacing: 8) {
             Text("Audio stays on your Mac.")
-                .font(.system(size: min(30, store.overlayFontSize), weight: .semibold, design: store.overlayFontStyle.design))
+                .font(.system(size: min(30, store.overlayPrimaryFontSize), weight: .semibold, design: store.overlayFontStyle.design))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
             if store.showsSourceText {
                 Text("Le son reste sur votre Mac.")
-                    .font(.system(size: max(10, min(18, store.overlayFontSize * 0.48)), weight: .medium, design: store.overlayFontStyle.design))
+                    .font(.system(size: min(18, store.overlaySourceFontSize), weight: .medium, design: store.overlayFontStyle.design))
                     .foregroundStyle(.white.opacity(0.68))
             }
         }
-        .padding(.horizontal, 22)
-        .padding(.vertical, 16)
+        .padding(.horizontal, store.overlayHorizontalPadding)
+        .padding(.vertical, store.overlayVerticalPadding)
         .frame(maxWidth: .infinity)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: store.overlayCornerRadius))
-        .background(.black.opacity(store.overlayBackgroundOpacity), in: RoundedRectangle(cornerRadius: store.overlayCornerRadius))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: store.overlayComputedCornerRadius))
+        .background(.black.opacity(store.overlayComputedBackgroundOpacity), in: RoundedRectangle(cornerRadius: store.overlayComputedCornerRadius))
         .overlay {
-            RoundedRectangle(cornerRadius: store.overlayCornerRadius)
+            RoundedRectangle(cornerRadius: store.overlayComputedCornerRadius)
                 .strokeBorder(.white.opacity(0.12))
         }
         .preferredColorScheme(.dark)

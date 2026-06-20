@@ -102,11 +102,9 @@ final class SubtitleOverlayController {
         let visibleFrame = panel?.screen?.visibleFrame
             ?? NSScreen.main?.visibleFrame
             ?? NSRect(x: 0, y: 0, width: 1280, height: 800)
-        let maxWidth = max(220, visibleFrame.width - 72)
-        let width = min(maxWidth, max(220, visibleFrame.width * store.overlayWidthFraction))
-        let sourceHeight = store.showsSourceText ? max(18, CGFloat(store.overlayFontSize * 0.70)) : 0
-        let fontDelta = max(-14, CGFloat(store.overlayFontSize - store.overlayTextSize.fontSize) * 1.25)
-        let height = max(54, store.overlayTextSize.panelBaseHeight + sourceHeight + fontDelta)
+        let metrics = overlayMetrics(for: store, visibleFrame: visibleFrame)
+        let width = metrics.width
+        let height = metrics.height
         let currentFrame = panel?.frame
         let proposedX = resetPosition ? (visibleFrame.midX - width / 2) : (currentFrame.map { $0.midX - width / 2 } ?? (visibleFrame.midX - width / 2))
         let proposedY = resetPosition ? (visibleFrame.minY + 58) : (currentFrame?.minY ?? (visibleFrame.minY + 58))
@@ -114,5 +112,65 @@ final class SubtitleOverlayController {
         let y = min(max(visibleFrame.minY + 18, proposedY), visibleFrame.maxY - height - 18)
 
         return NSRect(x: x, y: y, width: width, height: height)
+    }
+
+    private func overlayMetrics(for store: GlossaStore, visibleFrame: NSRect) -> (width: CGFloat, height: CGFloat) {
+        let screenMaxWidth = max(160, visibleFrame.width - 72)
+        if store.currentSubtitle == nil {
+            let side = CGFloat(48 + store.overlayScale * 24)
+            return (side, side)
+        }
+
+        let primaryFont = CGFloat(store.overlayPrimaryFontSize)
+        let sourceFont = CGFloat(store.overlaySourceFontSize)
+        let horizontalPadding = store.overlayHorizontalPadding + 16
+        let verticalPadding = store.overlayVerticalPadding + 16
+        let minWidth = CGFloat(190 + store.overlayScale * 80)
+        let maxWidth = min(screenMaxWidth, max(minWidth, visibleFrame.width * min(0.84, 0.48 + store.overlayScale * 0.20)))
+        let primaryText = store.currentSubtitle?.translatedText ?? ""
+        let sourceText = sourceText(for: store)
+        let longestLineEstimate = max(
+            estimatedWidth(for: primaryText, fontSize: primaryFont),
+            estimatedWidth(for: sourceText, fontSize: sourceFont)
+        )
+        let desiredWidth = longestLineEstimate + horizontalPadding * 2
+        let width = min(maxWidth, max(minWidth, desiredWidth))
+        let contentWidth = max(120, width - horizontalPadding * 2)
+        let primaryLines = lineCount(for: primaryText, fontSize: primaryFont, contentWidth: contentWidth, limit: 2)
+        let sourceLines = lineCount(for: sourceText, fontSize: sourceFont, contentWidth: contentWidth, limit: 2)
+        let sourceSpacing = sourceText.isEmpty ? 0 : CGFloat(4 + store.overlayScale * 4)
+        let textHeight =
+            CGFloat(primaryLines) * primaryFont * 1.22
+            + sourceSpacing
+            + CGFloat(sourceLines) * sourceFont * 1.25
+        let height = max(48, textHeight + verticalPadding * 2)
+
+        return (width.rounded(.up), height.rounded(.up))
+    }
+
+    private func sourceText(for store: GlossaStore) -> String {
+        guard store.showsSourceText,
+              let segment = store.currentSubtitle,
+              segment.sourceText != segment.translatedText
+        else {
+            return ""
+        }
+        return segment.sourceText
+    }
+
+    private func estimatedWidth(for text: String, fontSize: CGFloat) -> CGFloat {
+        guard !text.isEmpty else { return 0 }
+        let wideCharacters = text.filter { "MW@#%&".contains($0) }.count
+        let narrowCharacters = text.filter { " il.,'’".contains($0) }.count
+        let otherCharacters = max(0, text.count - wideCharacters - narrowCharacters)
+        return CGFloat(wideCharacters) * fontSize * 0.78
+            + CGFloat(narrowCharacters) * fontSize * 0.30
+            + CGFloat(otherCharacters) * fontSize * 0.54
+    }
+
+    private func lineCount(for text: String, fontSize: CGFloat, contentWidth: CGFloat, limit: Int) -> Int {
+        guard !text.isEmpty else { return 0 }
+        let estimate = estimatedWidth(for: text, fontSize: fontSize)
+        return min(limit, max(1, Int(ceil(estimate / max(1, contentWidth)))))
     }
 }

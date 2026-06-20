@@ -184,9 +184,9 @@ struct MenuBarContent: View {
 
     private var appearanceStrip: some View {
         HStack(spacing: 8) {
-            Label("\(Int(store.overlayFontSize)) pt", systemImage: "textformat.size")
+            Label("\(Int(store.overlayScale * 100))%", systemImage: "textformat.size")
             Spacer()
-            Text("\(Int(store.overlayWidthFraction * 100))% width")
+            Text("\(Int(store.overlayPrimaryFontSize)) pt")
             Button {
                 openSettingsWindow()
             } label: {

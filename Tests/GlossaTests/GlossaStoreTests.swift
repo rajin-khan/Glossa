@@ -18,7 +18,8 @@ final class GlossaStoreTests: XCTestCase {
         store.captureMode = .microphone
 
         XCTAssertEqual(store.listeningState, .idle)
-        XCTAssertFalse(store.overlayVisible)
+        XCTAssertTrue(store.overlayVisible)
+        XCTAssertNil(store.currentSubtitle)
     }
 
     func testOverlayPreferencesPersist() {
@@ -30,6 +31,7 @@ final class GlossaStoreTests: XCTestCase {
         )
         firstStore.showsSourceText = false
         firstStore.overlayTextSize = .large
+        firstStore.overlayScale = 0.72
         firstStore.overlayFontSize = 36
         firstStore.overlayFontStyle = .serif
         firstStore.overlayWidthFraction = 0.48
@@ -44,6 +46,7 @@ final class GlossaStoreTests: XCTestCase {
 
         XCTAssertFalse(restoredStore.showsSourceText)
         XCTAssertEqual(restoredStore.overlayTextSize, .large)
+        XCTAssertEqual(restoredStore.overlayScale, 0.72, accuracy: 0.001)
         XCTAssertEqual(restoredStore.overlayFontSize, 36)
         XCTAssertEqual(restoredStore.overlayFontStyle, .serif)
         XCTAssertEqual(restoredStore.overlayWidthFraction, 0.48, accuracy: 0.001)

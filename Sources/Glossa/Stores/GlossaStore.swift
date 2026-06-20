@@ -34,6 +34,7 @@ final class GlossaStore: ObservableObject {
 
     @Published var listeningState: ListeningState = .idle
     @Published var recentSegments: [TranscriptSegment] = []
+    @Published private var activeSubtitle: TranscriptSegment?
     @Published var overlayVisible = false
     @Published var captureMetrics: AudioCaptureMetrics = .idle
     @Published var permissions: CapturePermissionSnapshot = .unknown
@@ -52,6 +53,12 @@ final class GlossaStore: ObservableObject {
             defaults.set(overlayTextSize.rawValue, forKey: DefaultsKey.overlayTextSize)
             overlayFontSize = overlayTextSize.fontSize
             overlayWidthFraction = overlayTextSize.defaultWidthFraction
+            notifyOverlayAppearanceChanged()
+        }
+    }
+    @Published var overlayScale: Double = 1 {
+        didSet {
+            defaults.set(Self.clamped(overlayScale, range: 0.20...1.35), forKey: DefaultsKey.overlayScale)
             notifyOverlayAppearanceChanged()
         }
     }
@@ -119,11 +126,18 @@ final class GlossaStore: ObservableObject {
         let restoredProvider = Self.restoreTranscriptionProvider(from: defaults)
         let restoredOverlayTextSize = Self.restoreOverlayTextSize(from: defaults)
         let restoredOverlayFontStyle = Self.restoreOverlayFontStyle(from: defaults)
+        let restoredOverlayScale = Self.restoreDouble(
+            from: defaults,
+            key: DefaultsKey.overlayScale,
+            fallback: 1,
+            range: 0.20...1.35
+        )
         targetLanguage = restoredTargetLanguage
         captureMode = restoredCaptureMode
         self.transcriptionProvider = restoredProvider
         showsSourceText = defaults.object(forKey: DefaultsKey.showsSourceText) as? Bool ?? true
         overlayTextSize = restoredOverlayTextSize
+        overlayScale = restoredOverlayScale
         overlayFontSize = Self.restoreDouble(
             from: defaults,
             key: DefaultsKey.overlayFontSize,
@@ -184,7 +198,35 @@ final class GlossaStore: ObservableObject {
     }
 
     var currentSubtitle: TranscriptSegment? {
-        recentSegments.last
+        activeSubtitle
+    }
+
+    var overlayPrimaryFontSize: Double {
+        (8 + overlayScale * 21).rounded()
+    }
+
+    var overlaySourceFontSize: Double {
+        max(9, (overlayPrimaryFontSize * 0.48).rounded())
+    }
+
+    var overlayHorizontalPadding: CGFloat {
+        CGFloat(8 + overlayScale * 20)
+    }
+
+    var overlayVerticalPadding: CGFloat {
+        CGFloat(6 + overlayScale * 12)
+    }
+
+    var overlayComputedCornerRadius: CGFloat {
+        CGFloat(8 + overlayScale * 18)
+    }
+
+    var overlayComputedBackgroundOpacity: Double {
+        min(0.64, max(0.06, 0.04 + overlayScale * 0.44))
+    }
+
+    var overlayEmptyMarkSize: CGFloat {
+        CGFloat(22 + overlayScale * 18)
     }
 
     func toggleListening() {
@@ -221,12 +263,14 @@ final class GlossaStore: ObservableObject {
         captureMetrics = .idle
         hasLoggedAudioFlow = false
         listeningState = .idle
-        overlayVisible = false
-        overlayVisibilityHandler?(false)
+        activeSubtitle = nil
+        notifyOverlayAppearanceChanged()
     }
 
     func clearTranscript() {
         recentSegments.removeAll()
+        activeSubtitle = nil
+        notifyOverlayAppearanceChanged()
     }
 
     func setOverlayVisibilityHandler(_ handler: @escaping (Bool) -> Void) {
@@ -257,6 +301,7 @@ final class GlossaStore: ObservableObject {
     func resetOverlayAppearance() {
         showsSourceText = true
         overlayTextSize = .standard
+        overlayScale = 1
         overlayFontSize = OverlayTextSize.standard.fontSize
         overlayFontStyle = .rounded
         overlayWidthFraction = OverlayTextSize.standard.defaultWidthFraction
@@ -435,10 +480,12 @@ final class GlossaStore: ObservableObject {
     }
 
     private func append(segment: TranscriptSegment) {
+        activeSubtitle = segment
         recentSegments.append(segment)
         if recentSegments.count > 12 {
             recentSegments.removeFirst(recentSegments.count - 12)
         }
+        notifyOverlayAppearanceChanged()
     }
 
     private func attachTranscriptionHandlers() {
@@ -547,6 +594,7 @@ private enum DefaultsKey {
     static let transcriptionProvider = "transcriptionProvider"
     static let showsSourceText = "showsSourceText"
     static let overlayTextSize = "overlayTextSize"
+    static let overlayScale = "overlayScale"
     static let overlayFontSize = "overlayFontSize"
     static let overlayFontStyle = "overlayFontStyle"
     static let overlayWidthFraction = "overlayWidthFraction"
