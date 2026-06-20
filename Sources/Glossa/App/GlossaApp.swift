@@ -9,6 +9,7 @@ struct GlossaApp: App {
         WindowGroup("Glossa", id: "main") {
             ContentView(store: store)
                 .frame(minWidth: 860, minHeight: 580)
+                .preferredColorScheme(.dark)
                 .onAppear {
                     appDelegate.configure(store: store)
                 }
@@ -31,14 +32,7 @@ struct GlossaApp: App {
 
         Settings {
             SettingsView(store: store)
+                .preferredColorScheme(.dark)
         }
-
-        MenuBarExtra {
-            MenuBarContent(store: store)
-        } label: {
-            BirdRibbonMarkView(size: 18, isMenuBar: true)
-                .accessibilityLabel("Glossa")
-        }
-        .menuBarExtraStyle(.menu)
     }
 }

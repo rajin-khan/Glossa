@@ -1,4 +1,121 @@
+import AppKit
 import SwiftUI
+
+enum GlossaBrandAssets {
+    static func appIconImage() -> NSImage? {
+        loadImage(candidates: [
+            ("Glossa-AppIcon", "png"),
+            ("Glossa", "icns")
+        ])
+    }
+
+    static func templateMarkImage() -> NSImage? {
+        guard let image = loadImage(candidates: [("Glossa-MarkTemplate", "png")]) else {
+            return nil
+        }
+        image.isTemplate = true
+        return image
+    }
+
+    static func markImage() -> NSImage? {
+        loadImage(candidates: [("Glossa-MarkTemplate", "png")])
+    }
+
+    private static func loadImage(candidates: [(String, String)]) -> NSImage? {
+        for candidate in candidates {
+            if let image = NSImage(named: candidate.0) {
+                return image
+            }
+
+            if let url = Bundle.main.url(forResource: candidate.0, withExtension: candidate.1),
+               let image = NSImage(contentsOf: url) {
+                return image
+            }
+
+            let workingDirectoryURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+            let assetURL = workingDirectoryURL
+                .appendingPathComponent("Assets", isDirectory: true)
+                .appendingPathComponent("\(candidate.0).\(candidate.1)")
+            if let image = NSImage(contentsOf: assetURL) {
+                return image
+            }
+        }
+
+        return nil
+    }
+}
+
+struct GlossaAppIconView: View {
+    var size: CGFloat = 56
+
+    var body: some View {
+        Group {
+            if let image = GlossaBrandAssets.appIconImage() {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .antialiased(true)
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                RoundedRectangle(cornerRadius: size * 0.22)
+                    .fill(.black)
+                    .overlay {
+                        GlossaMarkView(size: size * 0.62)
+                    }
+            }
+        }
+        .frame(width: size, height: size)
+        .shadow(color: .black.opacity(0.40), radius: size * 0.28, y: size * 0.12)
+    }
+}
+
+struct GlossaMarkView: View {
+    var size: CGFloat = 36
+    var template = false
+
+    var body: some View {
+        Group {
+            if template, let image = GlossaBrandAssets.templateMarkImage() {
+                Image(nsImage: image)
+                    .resizable()
+                    .renderingMode(.template)
+                    .interpolation(.high)
+                    .antialiased(true)
+                    .aspectRatio(contentMode: .fit)
+            } else if let image = GlossaBrandAssets.markImage() {
+                Image(nsImage: image)
+                    .resizable()
+                    .interpolation(.high)
+                    .antialiased(true)
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                BirdRibbonMarkView(size: size, isMenuBar: template)
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+struct GlossaMenuBarMarkView: View {
+    let state: ListeningState
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            GlossaMarkView(size: 18, template: true)
+                .foregroundStyle(.primary)
+                .frame(width: 18, height: 18)
+
+            if state == .listening || state == .previewing || state == .starting {
+                Circle()
+                    .fill(state == .starting ? .yellow : .teal)
+                    .frame(width: 5, height: 5)
+                    .offset(x: 1.5, y: -1.5)
+            }
+        }
+        .frame(width: 22, height: 18)
+        .accessibilityLabel("Glossa")
+    }
+}
 
 struct BirdRibbonMarkView: View {
     var size: CGFloat = 36

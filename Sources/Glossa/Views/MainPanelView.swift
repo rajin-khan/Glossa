@@ -5,32 +5,46 @@ struct MainPanelView: View {
     @State private var showsDiagnostics = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            brandHeader
-            sessionControls
-            Divider()
+        ZStack {
+            Color.glossaInk.ignoresSafeArea()
+            LinearGradient(
+                colors: [.white.opacity(0.08), .clear, .black.opacity(0.48)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    if needsActivePermission {
-                        activePermissionBanner
+            GlossaMarkView(size: 460)
+                .opacity(0.035)
+                .rotationEffect(.degrees(-8))
+                .offset(x: 245, y: 130)
+
+            VStack(spacing: 0) {
+                brandHeader
+                sessionControls
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 22) {
+                        if needsActivePermission {
+                            activePermissionBanner
+                        }
+
+                        if let runtimeIssue {
+                            RuntimeIssueBanner(issue: runtimeIssue)
+                        }
+
+                        if showsModelSetup {
+                            modelSetupBanner
+                        }
+
+                        LiveSubtitleSurface(store: store)
+                        recentTranscript
+                        diagnostics
                     }
-
-                    if let runtimeIssue {
-                        RuntimeIssueBanner(issue: runtimeIssue)
-                    }
-
-                    if showsModelSetup {
-                        modelSetupBanner
-                    }
-
-                    LiveSubtitleSurface(store: store)
-                    recentTranscript
-                    diagnostics
+                    .padding(24)
+                    .frame(maxWidth: 940)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(24)
-                .frame(maxWidth: 900)
-                .frame(maxWidth: .infinity)
             }
         }
         .navigationTitle("Glossa")
@@ -54,27 +68,34 @@ struct MainPanelView: View {
     }
 
     private var sessionControls: some View {
-        HStack(spacing: 14) {
-            Picker("Capture", selection: $store.captureMode) {
-                ForEach(CaptureMode.allCases) { mode in
-                    Label(mode.rawValue, systemImage: captureIcon(for: mode))
-                        .tag(mode)
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Listen To")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Picker("Capture", selection: $store.captureMode) {
+                    ForEach(CaptureMode.allCases) { mode in
+                        Label(mode.rawValue, systemImage: captureIcon(for: mode))
+                            .tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+            .frame(maxWidth: 340)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Translate Into")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Picker("Translate to", selection: $store.targetLanguage) {
+                    ForEach(store.availableTargetLanguages) { language in
+                        Text("\(language.name) · \(language.nativeName)")
+                            .tag(language)
+                    }
                 }
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(maxWidth: 330)
-
-            Divider()
-                .frame(height: 22)
-
-            Picker("Translate to", selection: $store.targetLanguage) {
-                ForEach(store.availableTargetLanguages) { language in
-                    Text("\(language.name) · \(language.nativeName)")
-                        .tag(language)
-                }
-            }
-            .frame(width: 210)
+            .frame(width: 230)
 
             Spacer()
 
@@ -91,37 +112,52 @@ struct MainPanelView: View {
             .keyboardShortcut(.space, modifiers: [])
         }
         .padding(.horizontal, 24)
-        .padding(.vertical, 14)
+        .padding(.vertical, 16)
+        .background(.black.opacity(0.32))
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(.white.opacity(0.08))
+                .frame(height: 1)
+        }
     }
 
     private var brandHeader: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(.black.opacity(0.72))
-                BirdRibbonMarkView(size: 42)
-            }
-            .frame(width: 58, height: 58)
-            .overlay {
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(.white.opacity(0.10))
-            }
+        HStack(spacing: 16) {
+            GlossaAppIconView(size: 64)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Glossa")
-                    .font(.title2.weight(.semibold))
-                Text("Carries live speech as a ribbon of translated captions.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Text("Glossa")
+                        .font(.system(size: 30, weight: .semibold, design: .rounded))
+                    GlossaMarkView(size: 28)
+                        .opacity(0.72)
+                }
+                Text("A private ribbon for live translated subtitles.")
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(.white.opacity(0.62))
             }
 
             Spacer()
 
             ListeningBadge(state: store.listeningState)
         }
-        .padding(18)
-        .background(.ultraThinMaterial)
-        .background(.black.opacity(0.28))
+        .padding(.horizontal, 24)
+        .padding(.vertical, 20)
+        .background {
+            ZStack {
+                Rectangle().fill(.ultraThinMaterial)
+                LinearGradient(
+                    colors: [.white.opacity(0.08), .black.opacity(0.20)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(.white.opacity(0.08))
+                .frame(height: 1)
+        }
     }
 
     private var recentTranscript: some View {
@@ -214,9 +250,9 @@ struct MainPanelView: View {
             }
         }
         .padding(14)
-        .background(.yellow.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        .background(.yellow.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(.yellow.opacity(0.24))
         }
     }
@@ -233,9 +269,8 @@ struct MainPanelView: View {
 
     private var modelSetupBanner: some View {
         HStack(spacing: 12) {
-            Image(systemName: "cpu")
-                .font(.title3)
-                .foregroundStyle(.teal)
+            GlossaMarkView(size: 28)
+                .opacity(0.82)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(modelSetupTitle)
@@ -258,9 +293,9 @@ struct MainPanelView: View {
             .disabled(!store.localModelStatus.canPrepare)
         }
         .padding(14)
-        .background(.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 8))
+        .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 14))
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(.white.opacity(0.12))
         }
     }
@@ -344,7 +379,7 @@ struct MainPanelView: View {
 private struct EmptyTranscriptView: View {
     var body: some View {
         VStack(spacing: 12) {
-            BirdRibbonMarkView(size: 42)
+            GlossaMarkView(size: 54)
                 .opacity(0.42)
             Text("No Ribbon Yet")
                 .font(.title3.weight(.semibold))
@@ -353,6 +388,11 @@ private struct EmptyTranscriptView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 150)
+        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(.white.opacity(0.08))
+        }
     }
 }
 
@@ -389,9 +429,9 @@ private struct RuntimeIssueBanner: View {
             }
         }
         .padding(14)
-        .background(.red.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
+        .background(.red.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 14)
                 .strokeBorder(.red.opacity(0.20))
         }
     }
@@ -418,17 +458,24 @@ private struct LiveSubtitleSurface: View {
 
             Spacer(minLength: 8)
 
-            Text(translatedText)
-                .font(.system(size: 30, weight: .semibold, design: .rounded))
-                .multilineTextAlignment(.center)
-                .lineLimit(4)
-                .minimumScaleFactor(0.68)
-                .contentTransition(.numericText())
+            ZStack {
+                GlossaMarkView(size: 150)
+                    .opacity(store.currentSubtitle == nil ? 0.10 : 0.045)
+                    .rotationEffect(.degrees(-6))
+
+                Text(translatedText)
+                    .font(.system(size: 32, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(4)
+                    .minimumScaleFactor(0.68)
+                    .contentTransition(.numericText())
+            }
 
             if let sourceText {
                 Text(sourceText)
                     .font(.body)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.58))
                     .multilineTextAlignment(.center)
                     .lineLimit(3)
             }
@@ -445,12 +492,30 @@ private struct LiveSubtitleSurface: View {
             }
         }
         .padding(24)
-        .frame(maxWidth: .infinity, minHeight: 260)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-        .background(.black.opacity(0.20), in: RoundedRectangle(cornerRadius: 8))
+        .frame(maxWidth: .infinity, minHeight: 285)
+        .background {
+            RoundedRectangle(cornerRadius: 18)
+                .fill(.black.opacity(0.48))
+                .overlay {
+                    LinearGradient(
+                        colors: [.white.opacity(0.08), .clear, .black.opacity(0.30)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 18))
+                }
+        }
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(.separator.opacity(0.45))
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(.white.opacity(0.12))
+        }
+        .overlay(alignment: .bottomLeading) {
+            Capsule()
+                .fill(.white.opacity(0.18))
+                .frame(width: store.isListening ? 150 : 70, height: 3)
+                .padding(.leading, 24)
+                .padding(.bottom, 16)
+                .animation(.easeInOut(duration: 0.22), value: store.isListening)
         }
     }
 

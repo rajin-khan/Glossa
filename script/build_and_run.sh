@@ -21,6 +21,7 @@ APP_RESOURCES="$APP_CONTENTS/Resources"
 APP_BINARY="$APP_MACOS/$APP_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 ICON_SOURCE="$ROOT_DIR/Assets/Glossa-AppIcon.png"
+MARK_TEMPLATE_SOURCE="$ROOT_DIR/Assets/Glossa-MarkTemplate.png"
 ICONSET_DIR="$ROOT_DIR/.build/Glossa.iconset"
 
 mkdir -p "$LOCAL_CACHE" "$ROOT_DIR/.build/module-cache"
@@ -50,6 +51,8 @@ mkdir -p "$ICONSET_DIR"
 /usr/bin/sips -z 512 512 "$ICON_SOURCE" --out "$ICONSET_DIR/icon_512x512.png" >/dev/null
 cp "$ICON_SOURCE" "$ICONSET_DIR/icon_512x512@2x.png"
 /usr/bin/iconutil --convert icns "$ICONSET_DIR" --output "$APP_RESOURCES/Glossa.icns"
+cp "$ICON_SOURCE" "$APP_RESOURCES/Glossa-AppIcon.png"
+cp "$MARK_TEMPLATE_SOURCE" "$APP_RESOURCES/Glossa-MarkTemplate.png"
 
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

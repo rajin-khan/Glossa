@@ -15,10 +15,25 @@ struct SidebarView: View {
         }
         .listStyle(.sidebar)
         .navigationTitle("Glossa")
+        .safeAreaInset(edge: .top) {
+            HStack(spacing: 10) {
+                GlossaAppIconView(size: 34)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Glossa")
+                        .font(.callout.weight(.semibold))
+                    Text("Speech carried as captions")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+        }
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 8) {
-                Image(systemName: "lock.fill")
-                    .foregroundStyle(.teal)
+                GlossaMarkView(size: 24)
+                    .opacity(0.76)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Local & Private")
                         .font(.caption.weight(.semibold))
@@ -30,5 +45,6 @@ struct SidebarView: View {
             }
             .padding(12)
         }
+        .preferredColorScheme(.dark)
     }
 }

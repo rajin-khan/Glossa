@@ -6,11 +6,22 @@ struct TranscriptHistoryView: View {
     var body: some View {
         Group {
             if store.recentSegments.isEmpty {
-                ContentUnavailableView(
-                    "No Transcript Yet",
-                    systemImage: "text.alignleft",
-                    description: Text("Start listening and translated lines will appear here.")
-                )
+                VStack(spacing: 14) {
+                    GlossaMarkView(size: 72)
+                        .opacity(0.38)
+                    Text("No Transcript Yet")
+                        .font(.title2.weight(.semibold))
+                    Text("Start listening and Glossa will thread translated lines here.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background {
+                    Color.glossaInk
+                    GlossaMarkView(size: 360)
+                        .opacity(0.035)
+                        .offset(x: 180, y: 120)
+                }
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
@@ -26,8 +37,10 @@ struct TranscriptHistoryView: View {
                     .frame(maxWidth: 820)
                     .frame(maxWidth: .infinity)
                 }
+                .background(Color.glossaInk)
             }
         }
+        .preferredColorScheme(.dark)
         .navigationTitle("Transcript")
         .toolbar {
             ToolbarItemGroup {

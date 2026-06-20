@@ -50,7 +50,7 @@ struct SubtitleOverlayView: View {
 
     private var listeningPlaceholder: some View {
         HStack(spacing: 11) {
-            BirdRibbonMarkView(size: 20)
+            GlossaMarkView(size: 24)
                 .opacity(store.isListening ? 0.82 : 0.56)
 
             Text(store.isListening ? "Listening for speech…" : "Subtitles are ready")
