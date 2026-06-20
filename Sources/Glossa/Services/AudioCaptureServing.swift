@@ -9,7 +9,6 @@ protocol AudioCaptureServing: AnyObject {
 }
 
 enum AudioCaptureError: LocalizedError {
-    case microphoneNotImplemented
     case noShareableDisplay
     case screenRecordingPermissionRequired
     case microphonePermissionRequired
@@ -18,8 +17,6 @@ enum AudioCaptureError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .microphoneNotImplemented:
-            "Microphone capture is planned, but this first milestone is focused on system audio."
         case .noShareableDisplay:
             "Glossa could not find a display for ScreenCaptureKit audio capture."
         case .screenRecordingPermissionRequired:

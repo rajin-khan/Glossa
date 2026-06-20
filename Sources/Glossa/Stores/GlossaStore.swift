@@ -334,18 +334,21 @@ final class GlossaStore: ObservableObject {
     }
 
     func openSystemAudioPermissionSettings() {
-        openSystemSettingsPane("x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")
+        openSystemSettingsPane([
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
+            "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_ScreenCapture"
+        ])
     }
 
     func openMicrophonePermissionSettings() {
-        openSystemSettingsPane("x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
+        openSystemSettingsPane([
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone",
+            "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Microphone"
+        ])
     }
 
     func openCapturePermissionSettings() {
         openSystemAudioPermissionSettings()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
-            self?.openMicrophonePermissionSettings()
-        }
     }
 
     func prepareLocalModel() {
@@ -612,9 +615,44 @@ final class GlossaStore: ObservableObject {
         overlayAppearanceChangeHandler?()
     }
 
-    private func openSystemSettingsPane(_ string: String) {
-        guard let url = URL(string: string) else { return }
-        NSWorkspace.shared.open(url)
+    private func openSystemSettingsPane(_ candidates: [String]) {
+        for candidate in candidates {
+            guard let url = URL(string: candidate) else { continue }
+            if NSWorkspace.shared.open(url) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                    Self.activateSystemSettings()
+                }
+                return
+            }
+        }
+
+        Self.activateSystemSettings()
+    }
+
+    private static func activateSystemSettings() {
+        let bundleIdentifiers = [
+            "com.apple.systempreferences",
+            "com.apple.Preferences"
+        ]
+
+        if let runningApp = bundleIdentifiers
+            .compactMap({ NSRunningApplication.runningApplications(withBundleIdentifier: $0).first })
+            .first {
+            runningApp.activate(options: [.activateAllWindows])
+            return
+        }
+
+        guard let appURL = bundleIdentifiers
+            .compactMap({ NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) })
+            .first else { return }
+
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        NSWorkspace.shared.openApplication(at: appURL, configuration: configuration) { _, error in
+            if let error {
+                GlossaLog.app.error("System Settings open failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
     }
 
     private static func makeTranscriptionService(for provider: TranscriptionProviderKind) -> TranscriptionServing {

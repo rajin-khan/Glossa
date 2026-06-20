@@ -77,7 +77,7 @@ struct MainPanelView: View {
                     .foregroundStyle(.secondary)
                 Picker("Capture", selection: $store.captureMode) {
                     ForEach(CaptureMode.allCases) { mode in
-                        Label(mode.rawValue, systemImage: captureIcon(for: mode))
+                        Label(mode.rawValue, systemImage: mode.systemImage)
                             .tag(mode)
                     }
                 }
@@ -240,6 +240,11 @@ struct MainPanelView: View {
             }
 
             Button("Grant Access") {
+                if store.captureMode == .systemAudio {
+                    store.openSystemAudioPermissionSettings()
+                } else {
+                    store.openMicrophonePermissionSettings()
+                }
                 Task {
                     if store.captureMode == .systemAudio {
                         await store.requestScreenRecordingPermission()
@@ -362,214 +367,5 @@ struct MainPanelView: View {
         store.captureMode == .systemAudio
             ? "Allow Glossa in Screen & System Audio Recording, then restart once."
             : "Allow microphone access to use the fallback capture source."
-    }
-
-    private func captureIcon(for mode: CaptureMode) -> String {
-        switch mode {
-        case .systemAudio:
-            "speaker.wave.2"
-        case .microphone:
-            "mic"
-        case .preview:
-            "play.rectangle"
-        }
-    }
-}
-
-private struct EmptyTranscriptView: View {
-    var body: some View {
-        VStack(spacing: 12) {
-            GlossaMarkView(size: 54)
-                .opacity(0.42)
-            Text("No captions yet")
-                .font(.title3.weight(.semibold))
-            Text("Translated lines will land here while Glossa listens.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, minHeight: 150)
-        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 14))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(.white.opacity(0.08))
-        }
-    }
-}
-
-private struct RuntimeIssue {
-    let title: String
-    let detail: String
-    let actionTitle: String?
-    let action: (() -> Void)?
-}
-
-private struct RuntimeIssueBanner: View {
-    let issue: RuntimeIssue
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "exclamationmark.circle.fill")
-                .font(.title3)
-                .foregroundStyle(.red)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(issue.title)
-                    .font(.callout.weight(.semibold))
-                Text(issue.detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(3)
-            }
-
-            Spacer()
-
-            if let actionTitle = issue.actionTitle,
-               let action = issue.action {
-                Button(actionTitle, action: action)
-            }
-        }
-        .padding(14)
-        .background(.red.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(.red.opacity(0.20))
-        }
-    }
-}
-
-private struct LiveSubtitleSurface: View {
-    @ObservedObject var store: GlossaStore
-
-    var body: some View {
-        VStack(spacing: 18) {
-            HStack {
-                Label(store.captureMode.rawValue, systemImage: captureIcon)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                Text(store.targetLanguage.nativeName)
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
-                    .background(.quaternary, in: Capsule())
-            }
-
-            Spacer(minLength: 8)
-
-            ZStack {
-                GlossaMarkView(size: 150)
-                    .opacity(store.currentSubtitle == nil ? 0.10 : 0.045)
-                    .rotationEffect(.degrees(-6))
-
-                Text(translatedText)
-                    .font(.system(size: 32, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(4)
-                    .minimumScaleFactor(0.68)
-                    .contentTransition(.numericText())
-            }
-
-            if let sourceText {
-                Text(sourceText)
-                    .font(.body)
-                    .foregroundStyle(.white.opacity(0.58))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(3)
-            }
-
-            Spacer(minLength: 8)
-
-            HStack(spacing: 7) {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 7, height: 7)
-                Text(flowStatus)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity, minHeight: 285)
-        .background {
-            RoundedRectangle(cornerRadius: 18)
-                .fill(.black.opacity(0.48))
-                .overlay {
-                    LinearGradient(
-                        colors: [.white.opacity(0.08), .clear, .black.opacity(0.30)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 18))
-                }
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 18)
-                .strokeBorder(.white.opacity(0.12))
-        }
-        .overlay(alignment: .bottomLeading) {
-            Capsule()
-                .fill(.white.opacity(0.18))
-                .frame(width: store.isListening ? 150 : 70, height: 3)
-                .padding(.leading, 24)
-                .padding(.bottom, 16)
-                .animation(.easeInOut(duration: 0.22), value: store.isListening)
-        }
-    }
-
-    private var translatedText: String {
-        guard let segment = store.currentSubtitle else { return "Ready when you are" }
-        return segment.translatedText
-    }
-
-    private var sourceText: String? {
-        guard store.showsSourceText,
-              let segment = store.currentSubtitle,
-              segment.sourceText != segment.translatedText
-        else {
-            return nil
-        }
-        return segment.sourceText
-    }
-
-    private var flowStatus: String {
-        switch store.listeningState {
-        case .idle:
-            "Ready to listen"
-        case .starting:
-            "Preparing local models"
-        case .listening:
-            "Listening privately on this Mac"
-        case .previewing:
-            "Previewing subtitle motion"
-        case .failed(let message):
-            message
-        }
-    }
-
-    private var statusColor: Color {
-        switch store.listeningState {
-        case .idle:
-            .secondary
-        case .starting:
-            .yellow
-        case .listening, .previewing:
-            .teal
-        case .failed:
-            .red
-        }
-    }
-
-    private var captureIcon: String {
-        switch store.captureMode {
-        case .systemAudio:
-            "speaker.wave.2"
-        case .microphone:
-            "mic"
-        case .preview:
-            "play.rectangle"
-        }
     }
 }
