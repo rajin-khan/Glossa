@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="landing/">Landing Page</a>
+  <a href="site/">Website</a>
   ·
   <a href="CHANGELOG.md">Changelog</a>
   ·
@@ -72,7 +72,8 @@ If you configure a LibreTranslate fallback URL, translated text for unsupported 
 
 - `Sources/Glossa`: native macOS app source
 - `Assets`: app icon and menu-bar template mark
-- `landing`: static promotional landing page
+- `site`: self-contained Next.js landing site for Vercel
+- `landing`: static promotional landing page reference
 - `script`: build, run, model prep, and release packaging scripts
 - `Tests`: SwiftPM test suite
 

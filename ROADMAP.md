@@ -13,6 +13,7 @@
 - [x] Transcript history, permissions, model setup, and recovery UX
 - [x] App icon, release bundle, ZIP packaging, and checksums
 - [x] Professional README, changelog, and promotional landing page
+- [x] Self-contained Next.js landing site for Vercel
 
 ## After First Public Testing
 

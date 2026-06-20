@@ -1,6 +1,10 @@
 .DS_Store
 .build/
 dist/
+node_modules/
+.next/
+site/node_modules/
+site/.next/
 DerivedData/
 *.xcuserdata/
 *.xcworkspace/xcuserdata/

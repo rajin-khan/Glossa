@@ -16,6 +16,7 @@ All notable changes to Glossa are tracked here.
 - AppKit-backed menu-bar applet with start/pause, overlay, target language, capture source, and latest caption controls.
 - Local transcript history, permission recovery, model setup, and diagnostics.
 - Release packaging script for an ad-hoc signed `.app`, ZIP archive, and SHA-256 checksum.
+- Self-contained Next.js landing site in `site/` for Vercel deployment.
 
 ### Verified
 
