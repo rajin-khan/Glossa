@@ -123,6 +123,7 @@ final class SystemAudioCaptureService: NSObject, AudioCaptureServing {
     private func stopMicrophone() {
         #if canImport(ScreenCaptureKit)
         guard let audioEngine else { return }
+        microphoneTapHandler?.invalidate()
         audioEngine.inputNode.removeTap(onBus: 0)
         audioEngine.stop()
         self.audioEngine = nil
@@ -255,48 +256,105 @@ private enum AudioBufferAnalyzer {
     }
 }
 
-private enum MicrophoneBufferAnalyzer {
+struct MicrophoneSampleBatch: Sendable {
+    var samples: [Float]
+    var sampleRate: Double
+    var channelCount: Int
+    var capturedAt: Date
+}
+
+enum MicrophoneBufferAnalyzer {
     struct Analysis {
         var metrics: AudioCaptureMetrics
         var frame: AudioFrame
     }
 
-    static func analysis(from buffer: AVAudioPCMBuffer) -> Analysis? {
-        guard let channelData = buffer.floatChannelData else { return nil }
-
+    static func capture(from buffer: AVAudioPCMBuffer) -> MicrophoneSampleBatch? {
         let frameLength = Int(buffer.frameLength)
-        let channelCount = max(1, Int(buffer.format.channelCount))
         guard frameLength > 0 else { return nil }
 
-        var samples: [Float] = []
-        samples.reserveCapacity(frameLength)
+        let audioBuffers = UnsafeMutableAudioBufferListPointer(buffer.mutableAudioBufferList)
+        guard !audioBuffers.isEmpty else { return nil }
 
-        for frameIndex in 0..<frameLength {
-            var mixedSample: Float = 0
-            for channelIndex in 0..<channelCount {
-                mixedSample += channelData[channelIndex][frameIndex]
+        var samples = [Float](repeating: 0, count: frameLength)
+
+        if audioBuffers.count == 1 {
+            guard let data = audioBuffers[0].mData?.assumingMemoryBound(to: Float.self) else {
+                return nil
             }
-            samples.append(min(1, max(-1, mixedSample / Float(channelCount))))
+
+            let channelsInBuffer = max(1, Int(audioBuffers[0].mNumberChannels))
+            let sourceChannels = max(1, min(Int(buffer.format.channelCount), channelsInBuffer))
+            let availableFrames = min(
+                frameLength,
+                Int(audioBuffers[0].mDataByteSize) / MemoryLayout<Float>.size / sourceChannels
+            )
+
+            for frameIndex in 0..<availableFrames {
+                let baseIndex = frameIndex * sourceChannels
+                var mixedSample: Float = 0
+                for channelIndex in 0..<sourceChannels {
+                    mixedSample += data[baseIndex + channelIndex]
+                }
+                samples[frameIndex] = clamped(mixedSample / Float(sourceChannels))
+            }
+        } else {
+            let sourceChannels = max(1, min(Int(buffer.format.channelCount), audioBuffers.count))
+
+            for channelIndex in 0..<sourceChannels {
+                guard let data = audioBuffers[channelIndex].mData?.assumingMemoryBound(to: Float.self) else {
+                    continue
+                }
+
+                let availableFrames = min(
+                    frameLength,
+                    Int(audioBuffers[channelIndex].mDataByteSize) / MemoryLayout<Float>.size
+                )
+
+                for frameIndex in 0..<availableFrames {
+                    samples[frameIndex] += data[frameIndex]
+                }
+            }
+
+            for frameIndex in samples.indices {
+                samples[frameIndex] = clamped(samples[frameIndex] / Float(sourceChannels))
+            }
         }
 
+        return MicrophoneSampleBatch(
+            samples: samples,
+            sampleRate: buffer.format.sampleRate,
+            channelCount: 1,
+            capturedAt: .now
+        )
+    }
+
+    static func analysis(from batch: MicrophoneSampleBatch) -> Analysis? {
+        guard !batch.samples.isEmpty else { return nil }
+
+        let samples = batch.samples
         let level = levels(from: samples)
         let metrics = AudioCaptureMetrics(
             level: level.rms,
             peak: level.peak,
             sampleCount: samples.count,
             bufferCount: 1,
-            sampleRate: buffer.format.sampleRate,
-            channelCount: 1,
+            sampleRate: batch.sampleRate,
+            channelCount: batch.channelCount,
             lastUpdated: .now
         )
         let frame = AudioFrame(
             samples: samples,
-            sampleRate: buffer.format.sampleRate,
-            channelCount: 1,
-            capturedAt: .now
+            sampleRate: batch.sampleRate,
+            channelCount: batch.channelCount,
+            capturedAt: batch.capturedAt
         )
 
         return Analysis(metrics: metrics, frame: frame)
+    }
+
+    private static func clamped(_ sample: Float) -> Float {
+        min(1, max(-1, sample))
     }
 
     private static func levels(from samples: [Float]) -> (rms: Double, peak: Double) {
@@ -338,6 +396,9 @@ private final class MicrophoneTapHandler: @unchecked Sendable {
     private let telemetryRelay: AudioCaptureTelemetryRelay
     private let frameRelay: AudioFrameRelay
     private let tapProbe = AudioTapProbe()
+    private let processingQueue = DispatchQueue(label: "com.rajin.glossa.microphone-processing", qos: .userInitiated)
+    private let stateLock = NSLock()
+    private var isActive = true
 
     init(telemetryRelay: AudioCaptureTelemetryRelay, frameRelay: AudioFrameRelay) {
         self.telemetryRelay = telemetryRelay
@@ -350,15 +411,35 @@ private final class MicrophoneTapHandler: @unchecked Sendable {
         }
     }
 
+    func invalidate() {
+        stateLock.lock()
+        isActive = false
+        stateLock.unlock()
+    }
+
     func receive(_ buffer: AVAudioPCMBuffer) {
-        let analysis = MicrophoneBufferAnalyzer.analysis(from: buffer)
-        tapProbe.recordFirstBuffer(
-            frameLength: Int(buffer.frameLength),
-            hasAnalysis: analysis != nil
-        )
-        guard let analysis else { return }
-        telemetryRelay.emit(analysis.metrics)
-        frameRelay.emit(analysis.frame)
+        guard let batch = MicrophoneBufferAnalyzer.capture(from: buffer) else {
+            return
+        }
+
+        processingQueue.async { [self] in
+            guard isStillActive else { return }
+            let analysis = MicrophoneBufferAnalyzer.analysis(from: batch)
+            tapProbe.recordFirstBuffer(
+                frameLength: batch.samples.count,
+                hasAnalysis: analysis != nil
+            )
+            guard let analysis else { return }
+            telemetryRelay.emit(analysis.metrics)
+            frameRelay.emit(analysis.frame)
+        }
+    }
+
+    private var isStillActive: Bool {
+        stateLock.lock()
+        let active = isActive
+        stateLock.unlock()
+        return active
     }
 }
 #endif
