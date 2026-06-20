@@ -2,6 +2,19 @@
 
 All notable changes to Glossa are tracked here.
 
+## 0.1.3 - 2026-06-21
+
+### Changed
+
+- Polished the empty transcript copy in the main app.
+- Updated download references for the latest preview package.
+
+### Verified
+
+- `swift test`
+- `pnpm run build`
+- Release package build, code-signature verification, and checksum verification.
+
 ## 0.1.2 - 2026-06-21
 
 ### Fixed

@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/rajin-khan/Glossa/releases/download/v0.1.2/Glossa-0.1.2-macOS.zip">
-    <img src="https://img.shields.io/badge/Download_for_macOS-0.1.2_preview-78EAF2?style=for-the-badge&logo=apple&logoColor=111111" alt="Download Glossa 0.1.2 preview for macOS">
+  <a href="https://github.com/rajin-khan/Glossa/releases/download/v0.1.3/Glossa-0.1.3-macOS.zip">
+    <img src="https://img.shields.io/badge/Download_for_macOS-0.1.3_preview-78EAF2?style=for-the-badge&logo=apple&logoColor=111111" alt="Download Glossa 0.1.3 preview for macOS">
   </a>
 </p>
 
@@ -63,12 +63,12 @@ The core pipeline is free to run and local-first. WhisperKit handles speech reco
 
 > Glossa currently ships as an early preview for macOS 15 Sequoia or later. Apple Silicon is recommended.
 
-1. [Download Glossa 0.1.2 for macOS](https://github.com/rajin-khan/Glossa/releases/download/v0.1.2/Glossa-0.1.2-macOS.zip).
-2. Unzip `Glossa-0.1.2-macOS.zip` and move `Glossa.app` to Applications.
+1. [Download Glossa 0.1.3 for macOS](https://github.com/rajin-khan/Glossa/releases/download/v0.1.3/Glossa-0.1.3-macOS.zip).
+2. Unzip `Glossa-0.1.3-macOS.zip` and move `Glossa.app` to Applications.
 3. On first launch, Control-click Glossa and choose **Open**.
 4. Choose a target language and grant Screen & System Audio Recording access when prompted.
 
-The preview uses a stable ad-hoc signature so development and testing remain free. It is not notarized with a paid Apple Developer ID yet. You can verify the archive against [`SHA256SUMS.txt`](https://github.com/rajin-khan/Glossa/releases/download/v0.1.2/SHA256SUMS.txt).
+The preview uses a stable ad-hoc signature so development and testing remain free. It is not notarized with a paid Apple Developer ID yet. You can verify the archive against [`SHA256SUMS.txt`](https://github.com/rajin-khan/Glossa/releases/download/v0.1.3/SHA256SUMS.txt).
 
 ### Permissions
 
@@ -116,7 +116,7 @@ swift test
 ./script/package_release.sh
 ```
 
-This creates `dist/Glossa-0.1.2-macOS.zip` and `dist/SHA256SUMS.txt` from an optimized build. Set `CODESIGN_IDENTITY` later to package with a paid Developer ID, hardened runtime, and notarization.
+This creates `dist/Glossa-0.1.3-macOS.zip` and `dist/SHA256SUMS.txt` from an optimized build. Set `CODESIGN_IDENTITY` later to package with a paid Developer ID, hardened runtime, and notarization.
 
 ## Project map
 

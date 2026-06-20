@@ -385,7 +385,7 @@ private struct EmptyTranscriptView: View {
         VStack(spacing: 12) {
             GlossaMarkView(size: 54)
                 .opacity(0.42)
-            Text("No Ribbon Yet")
+            Text("No captions yet")
                 .font(.title3.weight(.semibold))
             Text("Translated lines will land here while Glossa listens.")
                 .font(.callout)

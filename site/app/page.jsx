@@ -290,7 +290,7 @@ export default function Home() {
         <section className="download" id="download">
           <Image src="/glossa-app-icon.png" alt="" width={86} height={86} />
           <div>
-            <h2>Download Glossa 0.1.2.</h2>
+            <h2>Download Glossa 0.1.3.</h2>
             <p>
               Designed for Apple Silicon Macs running macOS 15 Sequoia or newer. The current build
               is ad-hoc signed for free GitHub distribution.
