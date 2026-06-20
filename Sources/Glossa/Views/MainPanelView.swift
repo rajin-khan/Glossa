@@ -130,12 +130,8 @@ struct MainPanelView: View {
             GlossaAppIconView(size: 64)
 
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text("Glossa")
-                        .font(.system(size: 30, weight: .semibold, design: .rounded))
-                    GlossaMarkView(size: 28)
-                        .opacity(0.72)
-                }
+                Text("Glossa")
+                    .font(.system(size: 30, weight: .semibold, design: .rounded))
                 Text("Private captions for Mac audio.")
                     .font(.callout.weight(.medium))
                     .foregroundStyle(.white.opacity(0.62))
