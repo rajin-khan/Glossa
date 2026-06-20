@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Glossa is a native macOS menu-bar app for local, live translated subtitles from your system audio.">
+    <meta name="theme-color" content="#050506">
+    <title>Glossa - Live translated subtitles for macOS</title>
+    <link rel="icon" href="../Assets/Glossa-AppIcon.png">
+    <link rel="apple-touch-icon" href="../Assets/Glossa-AppIcon.png">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Glossa home">
+        <img src="../Assets/Glossa-AppIcon.png" alt="" width="36" height="36">
+        <span>Glossa</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#features">Features</a>
+        <a href="#privacy">Privacy</a>
+        <a href="#download">Download</a>
+      </nav>
+      <a class="header-cta" href="https://github.com/rajin-khan/Glossa/releases">Download</a>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Native macOS subtitle utility</p>
+          <h1>Translate audio.</h1>
+          <p class="hero-text">
+            Live captions from your Mac audio, privately translated into the language you choose.
+          </p>
+          <div class="hero-actions">
+            <a class="primary-action" href="https://github.com/rajin-khan/Glossa/releases">Download 0.1.0</a>
+            <a class="secondary-action" href="https://github.com/rajin-khan/Glossa">View GitHub</a>
+          </div>
+        </div>
+
+        <div class="hero-visual" aria-label="Glossa app preview">
+          <div class="icon-plinth">
+            <img src="../Assets/Glossa-AppIcon.png" alt="Glossa app icon with an engraved bird and ribbon">
+          </div>
+          <div class="app-window">
+            <div class="window-bar">
+              <span></span><span></span><span></span>
+              <strong>Glossa</strong>
+            </div>
+            <div class="window-body">
+              <div class="control-row">
+                <div>
+                  <small>Listen To</small>
+                  <p>System Audio</p>
+                </div>
+                <div>
+                  <small>Translate Into</small>
+                  <p>Bangla · বাংলা</p>
+                </div>
+                <button>Start</button>
+              </div>
+              <div class="subtitle-stage">
+                <img src="../Assets/Glossa-MarkTemplate.png" alt="" aria-hidden="true">
+                <p class="translated">The translation appears while audio keeps playing.</p>
+                <p class="source">La traduction apparait pendant que l'audio continue.</p>
+              </div>
+            </div>
+          </div>
+          <div class="menu-applet">
+            <div class="applet-head">
+              <img src="../Assets/Glossa-AppIcon.png" alt="" width="44" height="44">
+              <div>
+                <strong>Glossa</strong>
+                <span>Ready in the menu bar</span>
+              </div>
+            </div>
+            <div class="applet-buttons">
+              <button>Start</button>
+              <button>Overlay</button>
+            </div>
+            <div class="applet-caption">
+              <small>Ribbon</small>
+              <p>Ready to carry the next line.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="feature-strip" aria-label="Core product qualities">
+        <div>
+          <strong>Local-first</strong>
+          <span>WhisperKit transcription on this Mac.</span>
+        </div>
+        <div>
+          <strong>Menu-bar fast</strong>
+          <span>Start, pause, switch language, and show the overlay.</span>
+        </div>
+        <div>
+          <strong>Bangla ready</strong>
+          <span>Apple first, LibreTranslate fallback optional.</span>
+        </div>
+      </section>
+
+      <section class="section" id="features">
+        <div class="section-heading">
+          <h2>Built for watching, listening, and staying immersed.</h2>
+          <p>Glossa stays out of the way until speech needs to become readable.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card large">
+            <span>01</span>
+            <h3>Floating bilingual subtitles</h3>
+            <p>Translations sit above full-screen apps and Spaces, with source text available underneath when you want it.</p>
+          </article>
+          <article class="feature-card">
+            <span>02</span>
+            <h3>System audio capture</h3>
+            <p>Capture audio playing on your Mac through ScreenCaptureKit, with microphone fallback when needed.</p>
+          </article>
+          <article class="feature-card">
+            <span>03</span>
+            <h3>Automatic source detection</h3>
+            <p>WhisperKit identifies the spoken language locally before Glossa translates into your selected target.</p>
+          </article>
+          <article class="feature-card dark">
+            <span>04</span>
+            <h3>A real macOS applet</h3>
+            <p>The menu-bar bird opens a compact control surface for listening, overlays, capture mode, and recent captions.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="privacy" id="privacy">
+        <div>
+          <h2>No account. No usage bill. No audio archive.</h2>
+          <p>
+            Audio frames are processed in memory and never saved by Glossa. Apple Translation and WhisperKit keep the default path local. If you configure LibreTranslate, choose a local endpoint to keep fallback translation on your own machine.
+          </p>
+        </div>
+        <ul>
+          <li>Speech recognition: WhisperKit on this Mac</li>
+          <li>Translation: Apple first, fallback optional</li>
+          <li>Capture: system audio or microphone fallback</li>
+          <li>Storage: transcripts stay local</li>
+        </ul>
+      </section>
+
+      <section class="download" id="download">
+        <img src="../Assets/Glossa-AppIcon.png" alt="" width="92" height="92">
+        <div>
+          <h2>Start with Glossa 0.1.0.</h2>
+          <p>The current build is ad-hoc signed for free GitHub distribution. Open it once with Control-click > Open.</p>
+        </div>
+        <a class="primary-action" href="https://github.com/rajin-khan/Glossa/releases">Download ZIP</a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>Glossa 0.1.0</span>
+      <a href="../CHANGELOG.md">Changelog</a>
+      <a href="../README.md">README</a>
+    </footer>
+  </body>
+</html>

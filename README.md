@@ -1,24 +1,46 @@
-# Glossa
+<p align="center">
+  <img src="Assets/Glossa-AppIcon.png" alt="Glossa app icon: an engraved glass bird carrying a ribbon" width="128" height="128">
+</p>
 
-Glossa is a native macOS menu-bar app that turns audio playing on your Mac into live translated subtitles. Speech recognition and translation run locally, with no account, API key, or usage bill.
+<h1 align="center">Glossa</h1>
 
-## What Works
+<p align="center">
+  A native macOS menu-bar app for live translated subtitles from the audio playing on your Mac.
+</p>
 
+<p align="center">
+  <a href="landing/">Landing Page</a>
+  ·
+  <a href="CHANGELOG.md">Changelog</a>
+  ·
+  <a href="ROADMAP.md">Roadmap</a>
+</p>
+
+## Overview
+
+Glossa listens to system audio or a microphone fallback, transcribes speech locally, auto-detects the source language, and translates captions into the target language you choose. It is designed as a polished macOS utility: quiet in the menu bar, quick from a compact applet, and readable through a floating subtitle overlay.
+
+The current build is free to develop and local-first. Speech recognition runs through WhisperKit on this Mac. Translation uses Apple Translation first, with an optional LibreTranslate-compatible fallback for Bangla or other unsupported Apple pairs. Glossa contains no OpenAI API integration, no account requirement, and no paid cloud dependency.
+
+## Highlights
+
+- Native SwiftUI macOS app with a dark bird-and-ribbon identity
+- Visible menu-bar bird icon with a compact control applet
+- Start, pause, target language, capture source, overlay, and latest caption from the applet
 - System-audio capture through ScreenCaptureKit
 - Microphone fallback through AVAudioEngine
 - Automatic source-language detection with local WhisperKit
-- Target languages discovered from Apple Translation plus Glossa's promised targets, including Bangla
-- Optional LibreTranslate-compatible fallback endpoint for Bangla or other unsupported Apple pairs
+- Apple on-device translation plus Glossa's promised targets, including Bangla
+- Optional LibreTranslate-compatible fallback endpoint
 - Floating bilingual subtitle overlay across Spaces and full-screen apps
-- Menu-bar listen, language, capture, and overlay controls
-- Local transcript history and model/permission recovery UI
-- No audio recording or transcript upload
+- Local transcript history and recovery UI for permissions and model setup
+- Audio frames are processed in memory and never saved by Glossa
 
 ## Requirements
 
 - macOS 15 or newer
 - Apple Silicon recommended
-- Screen & System Audio Recording permission
+- Screen & System Audio Recording permission for system audio capture
 - Internet once to download the free Whisper model and any Apple language packs
 
 ## Run From Source
@@ -45,3 +67,15 @@ The zero-budget build uses a stable ad-hoc signature. After downloading it from 
 Audio frames are processed in memory and never saved by Glossa. WhisperKit transcribes on this Mac; Apple Translation uses local language packs. Glossa contains no OpenAI API integration or paid cloud dependency.
 
 If you configure a LibreTranslate fallback URL, translated text for unsupported pairs is sent to that endpoint. Use a local endpoint such as `http://127.0.0.1:5000` to keep that fallback on your own machine.
+
+## Project Structure
+
+- `Sources/Glossa`: native macOS app source
+- `Assets`: app icon and menu-bar template mark
+- `landing`: static promotional landing page
+- `script`: build, run, model prep, and release packaging scripts
+- `Tests`: SwiftPM test suite
+
+## Status
+
+Glossa is an early local-first build intended for private testing and GitHub distribution. See [CHANGELOG.md](CHANGELOG.md) for shipped milestones and [ROADMAP.md](ROADMAP.md) for planned work.

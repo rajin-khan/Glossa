@@ -12,6 +12,7 @@
 - [x] Bilingual floating subtitle overlay
 - [x] Transcript history, permissions, model setup, and recovery UX
 - [x] App icon, release bundle, ZIP packaging, and checksums
+- [x] Professional README, changelog, and promotional landing page
 
 ## After First Public Testing
 
@@ -19,5 +20,6 @@
 - [ ] Add optional larger Whisper models
 - [ ] Export timestamped transcripts
 - [ ] Add launch-at-login preference
+- [ ] Add downloadable app screenshots and short demo video to the landing page
 - [ ] Add Developer ID signing and notarization when funding permits
 - [ ] Evaluate opt-in bring-your-own-key providers
