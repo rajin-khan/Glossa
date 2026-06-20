@@ -167,6 +167,7 @@ export default function Home() {
                     aria-hidden="true"
                     width={360}
                     height={360}
+                    loading="eager"
                   />
                   <div className="line-stack" aria-label="Example translated subtitles">
                     {previewLines.map((line, index) => (
