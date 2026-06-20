@@ -26,6 +26,7 @@ struct ContentView: View {
             let arguments = ProcessInfo.processInfo.arguments
             await store.refreshPermissions()
             await store.refreshAvailableTargetLanguages()
+            store.prepareCachedLocalModel()
             store.handleLaunchArguments(arguments)
             if arguments.contains("--open-settings") {
                 openSettings()

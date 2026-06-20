@@ -1,39 +1,22 @@
 # Glossa Roadmap
 
-## Milestone 0: Mac Shell
+## Local-First MVP
 
-- Native SwiftUI main window
-- Menu-bar extra with listen/pause controls
-- Floating subtitle overlay using a narrow AppKit bridge
-- App state model and provider boundaries
-- ScreenCaptureKit capture scaffold
+- [x] Native SwiftUI window and menu-bar utility
+- [x] ScreenCaptureKit system-audio capture
+- [x] AVAudioEngine microphone fallback
+- [x] Local multilingual WhisperKit transcription
+- [x] Automatic source-language detection
+- [x] Apple on-device translation and language-pack preparation
+- [x] Bilingual floating subtitle overlay
+- [x] Transcript history, permissions, model setup, and recovery UX
+- [x] App icon, release bundle, ZIP packaging, and checksums
 
-## Milestone 1: Audio Proof
+## After First Public Testing
 
-- [x] Request macOS audio/screen capture permissions
-- [x] Capture system audio buffers through ScreenCaptureKit
-- [x] Show live input level and capture health
-- [x] Add microphone fallback
-
-## Milestone 2: Realtime Captions
-
-- [x] Add PCM frames, speech gating, and ASR-sized audio chunks
-- [x] Add a transcription provider boundary
-- [x] Integrate WhisperKit as the free local default
-- [ ] Tune local model chunk size and transcript stabilization
-- [ ] Persist recent transcript segments
-
-## Milestone 3: Translation
-
-- Target language picker
-- Phrase-level translation buffering
-- Bilingual overlay mode
-- Apple Translation provider where available
-- Optional downloadable local translation packs for unsupported languages
-
-## Milestone 4: Local Mode
-
-- [x] WhisperKit local transcription
-- Download/manage model packs
-- Battery/performance controls
-- Offline privacy mode
+- [ ] Tune model/chunk presets for different Apple Silicon generations
+- [ ] Add optional larger Whisper models
+- [ ] Export timestamped transcripts
+- [ ] Add launch-at-login preference
+- [ ] Add Developer ID signing and notarization when funding permits
+- [ ] Evaluate opt-in bring-your-own-key providers

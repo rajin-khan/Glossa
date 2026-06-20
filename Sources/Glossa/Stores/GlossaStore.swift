@@ -199,6 +199,11 @@ final class GlossaStore: ObservableObject {
         modelManager.prepareModel()
     }
 
+    func prepareCachedLocalModel() {
+        guard case .downloaded = localModelStatus else { return }
+        prepareLocalModel()
+    }
+
     func restartApplication() {
         let bundleURL = Bundle.main.bundleURL
         let configuration = NSWorkspace.OpenConfiguration()

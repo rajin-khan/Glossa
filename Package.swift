@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "Glossa",
     platforms: [
-        .macOS(.v14)
+        .macOS(.v15)
     ],
     products: [
         .executable(name: "Glossa", targets: ["Glossa"]),

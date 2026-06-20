@@ -72,14 +72,19 @@ final class LocalWhisperTranscriptionService: TranscriptionServing, LocalModelMa
             guard let self else { return }
 
             do {
-                let downloadBase = try LocalModelDirectory.url()
-                let modelFolder = try await WhisperKit.download(
-                    variant: modelName,
-                    downloadBase: downloadBase
-                ) { progress in
-                    let fraction = progress.fractionCompleted
-                    Task { @MainActor [weak self] in
-                        self?.modelStatusHandler?(.downloading(progress: fraction))
+                let modelFolder: URL
+                if let cachedModelFolder = LocalModelDirectory.cachedModelFolder(modelName: modelName) {
+                    modelFolder = cachedModelFolder
+                } else {
+                    let downloadBase = try LocalModelDirectory.url()
+                    modelFolder = try await WhisperKit.download(
+                        variant: modelName,
+                        downloadBase: downloadBase
+                    ) { progress in
+                        let fraction = progress.fractionCompleted
+                        Task { @MainActor [weak self] in
+                            self?.modelStatusHandler?(.downloading(progress: fraction))
+                        }
                     }
                 }
                 self.modelStatusHandler?(.loading)
@@ -88,7 +93,7 @@ final class LocalWhisperTranscriptionService: TranscriptionServing, LocalModelMa
                     modelFolder: modelFolder.path,
                     verbose: false,
                     logLevel: .error,
-                    prewarm: true,
+                    prewarm: false,
                     load: true,
                     download: false
                 )
