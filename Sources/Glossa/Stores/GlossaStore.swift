@@ -198,6 +198,10 @@ final class GlossaStore: ObservableObject {
             GlossaLog.app.info("Applying system-audio smoke-test launch argument")
             captureMode = .systemAudio
             startListening()
+        } else if arguments.contains("--preview-subtitles") {
+            GlossaLog.app.info("Applying subtitle preview launch argument")
+            captureMode = .preview
+            startListening()
         }
     }
 

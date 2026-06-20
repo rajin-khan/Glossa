@@ -11,6 +11,9 @@ final class SubtitleOverlayController {
         if let panel {
             panel.contentView = NSHostingView(rootView: SubtitleOverlayView(store: store))
         }
+        if store.overlayVisible {
+            show()
+        }
     }
 
     func show() {
@@ -39,12 +42,12 @@ final class SubtitleOverlayController {
 
     private func makePanel(store: GlossaStore) -> NSPanel {
         let visibleFrame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 800)
-        let width: CGFloat = min(780, visibleFrame.width - 80)
+        let width: CGFloat = min(840, visibleFrame.width - 72)
         let rect = NSRect(
             x: visibleFrame.midX - width / 2,
-            y: visibleFrame.minY + 72,
+            y: visibleFrame.minY + 58,
             width: width,
-            height: 132
+            height: 176
         )
 
         let panel = NSPanel(
@@ -54,10 +57,13 @@ final class SubtitleOverlayController {
             defer: false
         )
         panel.backgroundColor = .clear
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.animationBehavior = .utilityWindow
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        panel.hidesOnDeactivate = false
         panel.hasShadow = false
         panel.isMovableByWindowBackground = true
         panel.isOpaque = false
+        panel.isReleasedWhenClosed = false
         panel.level = .floating
         panel.title = "Glossa Subtitles"
         panel.contentView = NSHostingView(rootView: SubtitleOverlayView(store: store))

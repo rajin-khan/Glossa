@@ -22,8 +22,8 @@ struct GlossaApp: App {
                 }
                 .keyboardShortcut("l", modifiers: [.command, .shift])
 
-                Button("Show Subtitle Overlay") {
-                    appDelegate.overlayController.show()
+                Button(store.overlayVisible ? "Hide Subtitle Overlay" : "Show Subtitle Overlay") {
+                    store.toggleOverlay()
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
             }
@@ -35,7 +35,7 @@ struct GlossaApp: App {
         }
 
         MenuBarExtra {
-            MenuBarContent(store: store, overlayController: appDelegate.overlayController)
+            MenuBarContent(store: store)
         } label: {
             Label("Glossa", systemImage: store.isListening ? "captions.bubble.fill" : "captions.bubble")
         }
