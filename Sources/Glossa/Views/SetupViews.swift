@@ -1,67 +1,5 @@
 import SwiftUI
 
-struct PermissionRow: View {
-    let title: String
-    let detail: String
-    let state: CapturePermissionState
-    let actionTitle: String
-    let action: () -> Void
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(color)
-                .frame(width: 24)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.callout.weight(.semibold))
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            Text(state.label)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(color)
-
-            Button(actionTitle, action: action)
-                .disabled(state.isReady)
-        }
-        .padding(12)
-        .background(.quaternary.opacity(0.32), in: RoundedRectangle(cornerRadius: 8))
-    }
-
-    private var icon: String {
-        switch state {
-        case .granted:
-            "checkmark.circle.fill"
-        case .needsPermission:
-            "exclamationmark.circle.fill"
-        case .denied:
-            "xmark.circle.fill"
-        case .unknown:
-            "questionmark.circle.fill"
-        }
-    }
-
-    private var color: Color {
-        switch state {
-        case .granted:
-            .teal
-        case .needsPermission:
-            .yellow
-        case .denied:
-            .red
-        case .unknown:
-            .secondary
-        }
-    }
-}
-
 struct LocalModelPreparationView: View {
     @ObservedObject var store: GlossaStore
 
@@ -150,4 +88,3 @@ struct RuntimeIssueBanner: View {
         }
     }
 }
-

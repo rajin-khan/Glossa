@@ -7,6 +7,7 @@ All notable changes to Glossa are tracked here.
 ### Changed
 
 - Split persistence, capture lifecycle, preview playback, AppKit system routing, main-window sections, and menu-bar sections into focused helper types.
+- Split status-bar ownership from app launch lifecycle and moved transcription provider/model callbacks into a dedicated coordinator.
 - Simplified the menu-bar applet with one brand mark, compact language and capture menus, lighter live-caption presentation, and smoother state transitions.
 - Reduced overlay customization to the intended single scale control plus source-text visibility.
 
@@ -14,15 +15,18 @@ All notable changes to Glossa are tracked here.
 
 - Serialized rapid capture stop/start operations so an older stop cannot tear down a newly started session.
 - Made the onboarding permission action reliably foreground the macOS Screen & System Audio Recording pane without competing permission prompts.
+- Sequenced permission requests and System Settings navigation consistently across the main window, menu bar, and Settings.
 
 ### Removed
 
 - Deleted unused overlay typography, width, opacity, and corner-radius preferences.
+- Deleted superseded permission-row and menu-bar-mark components.
 - Deleted the superseded static `landing/` site; `site/` remains the single Vercel-ready web app.
 
 ### Verified
 
 - `swift test`
+- Warning-as-error Swift build
 - `pnpm run build` in `site/`
 - `./script/build_and_run.sh --verify --preview-subtitles`
 

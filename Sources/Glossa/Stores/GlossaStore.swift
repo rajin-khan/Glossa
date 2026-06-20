@@ -26,8 +26,7 @@ final class GlossaStore: ObservableObject {
             if isListening {
                 stopListening()
             }
-            transcriptionService = Self.makeTranscriptionService(for: transcriptionProvider)
-            attachTranscriptionHandlers()
+            transcriptionCoordinator.replaceService(for: transcriptionProvider)
         }
     }
 
@@ -68,8 +67,8 @@ final class GlossaStore: ObservableObject {
     let translationBroker = TranslationRequestBroker()
 
     private let captureCoordinator: CaptureSessionCoordinator
+    private let transcriptionCoordinator: TranscriptionCoordinator
     private let systemApplicationService: SystemApplicationServing
-    private var transcriptionService: TranscriptionServing
     private let subtitlePipeline = SubtitlePipeline()
     private let subtitleTimeline = SubtitleTimeline()
     private let previewSession = PreviewSession()
@@ -101,7 +100,10 @@ final class GlossaStore: ObservableObject {
         showsSourceText = snapshot.showsSourceText
         overlayScale = snapshot.overlayScale
         fallbackTranslationURLString = snapshot.fallbackTranslationURLString
-        self.transcriptionService = transcriptionService ?? Self.makeTranscriptionService(for: snapshot.transcriptionProvider)
+        self.transcriptionCoordinator = TranscriptionCoordinator(
+            provider: snapshot.transcriptionProvider,
+            service: transcriptionService
+        )
         captureCoordinator.setMetricsHandler { [weak self] metrics in
             guard let self else { return }
             if metrics.lastUpdated != nil, !self.hasLoggedAudioFlow {
@@ -120,7 +122,7 @@ final class GlossaStore: ObservableObject {
         }
         subtitlePipeline.setChunkHandler { [weak self] chunk in
             guard let self else { return }
-            self.transcriptionStatus = self.transcriptionService.receive(chunk: chunk)
+            self.transcriptionStatus = self.transcriptionCoordinator.receive(chunk: chunk)
         }
         subtitleTimeline.setChangeHandler { [weak self] snapshot in
             guard let self else { return }
@@ -128,7 +130,16 @@ final class GlossaStore: ObservableObject {
             recentSegments = snapshot.recentSegments
             notifyOverlayAppearanceChanged()
         }
-        attachTranscriptionHandlers()
+        transcriptionCoordinator.setModelStatusHandler { [weak self] status in
+            self?.localModelStatus = status
+        }
+        transcriptionCoordinator.setStatusHandler { [weak self] status in
+            self?.transcriptionStatus = status
+        }
+        transcriptionCoordinator.setTranscriptHandler { [weak self] event in
+            guard let self else { return }
+            self.translationBroker.submit(event: event, targetLanguage: self.targetLanguage)
+        }
         translationBroker.setResultHandler { [weak self] segment in
             self?.subtitleTimeline.append(segment)
         }
@@ -173,7 +184,7 @@ final class GlossaStore: ObservableObject {
         previewSession.stop()
         captureCoordinator.stop()
         subtitlePipeline.reset()
-        transcriptionStatus = transcriptionService.stop()
+        transcriptionStatus = transcriptionCoordinator.stop()
         translationBroker.reset()
         pipelineStats = .idle
         captureMetrics = .idle
@@ -233,10 +244,16 @@ final class GlossaStore: ObservableObject {
 
     func requestScreenRecordingPermission() async {
         permissions = await captureCoordinator.requestScreenRecordingPermission()
+        if !permissions.screenRecording.isReady {
+            systemApplicationService.openSystemAudioPermissionSettings()
+        }
     }
 
     func requestMicrophonePermission() async {
         permissions = await captureCoordinator.requestMicrophonePermission()
+        if !permissions.microphone.isReady {
+            systemApplicationService.openMicrophonePermissionSettings()
+        }
     }
 
     func openSystemAudioPermissionSettings() {
@@ -248,11 +265,7 @@ final class GlossaStore: ObservableObject {
     }
 
     func prepareLocalModel() {
-        guard let modelManager = transcriptionService as? LocalModelManaging else {
-            localModelStatus = .unavailable
-            return
-        }
-        modelManager.prepareModel()
+        transcriptionCoordinator.prepareModel()
     }
 
     func prepareCachedLocalModel() {
@@ -290,7 +303,7 @@ final class GlossaStore: ObservableObject {
 
     private func startCapture() {
         listeningState = .starting
-        transcriptionStatus = transcriptionService.start(targetLanguage: targetLanguage)
+        transcriptionStatus = transcriptionCoordinator.start(targetLanguage: targetLanguage)
         captureCoordinator.start(
             mode: captureMode,
             permissionsUpdated: { [weak self] permissions in
@@ -303,7 +316,7 @@ final class GlossaStore: ObservableObject {
             didFail: { [weak self] error in
                 guard let self else { return }
                 GlossaLog.capture.error("Capture failed: \(error.localizedDescription, privacy: .public)")
-                transcriptionStatus = transcriptionService.stop()
+                transcriptionStatus = transcriptionCoordinator.stop()
                 listeningState = .failed(error.localizedDescription)
                 subtitleTimeline.clearActiveSubtitle()
             }
@@ -321,34 +334,8 @@ final class GlossaStore: ObservableObject {
         }
     }
 
-    private func attachTranscriptionHandlers() {
-        if let modelManager = transcriptionService as? LocalModelManaging {
-            modelManager.setModelStatusHandler { [weak self] status in
-                self?.localModelStatus = status
-            }
-        } else {
-            localModelStatus = .unavailable
-        }
-        transcriptionService.setStatusHandler { [weak self] status in
-            self?.transcriptionStatus = status
-        }
-        transcriptionService.setTranscriptHandler { [weak self] event in
-            guard let self else { return }
-            self.translationBroker.submit(event: event, targetLanguage: self.targetLanguage)
-        }
-    }
-
     private func notifyOverlayAppearanceChanged() {
         overlayAppearanceChangeHandler?()
-    }
-
-    private static func makeTranscriptionService(for provider: TranscriptionProviderKind) -> TranscriptionServing {
-        switch provider {
-        case .debug:
-            DebugTranscriptionService()
-        case .whisperKit:
-            LocalWhisperTranscriptionService(modelName: "tiny")
-        }
     }
 
     private static func fallbackTranslationURL(from string: String) -> URL? {

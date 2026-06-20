@@ -96,27 +96,6 @@ struct GlossaMarkView: View {
     }
 }
 
-struct GlossaMenuBarMarkView: View {
-    let state: ListeningState
-
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            GlossaMarkView(size: 18, template: true)
-                .foregroundStyle(.primary)
-                .frame(width: 18, height: 18)
-
-            if state == .listening || state == .previewing || state == .starting {
-                Circle()
-                    .fill(state == .starting ? .yellow : .teal)
-                    .frame(width: 5, height: 5)
-                    .offset(x: 1.5, y: -1.5)
-            }
-        }
-        .frame(width: 22, height: 18)
-        .accessibilityLabel("Glossa")
-    }
-}
-
 struct BirdRibbonMarkView: View {
     var size: CGFloat = 36
     var isMenuBar = false

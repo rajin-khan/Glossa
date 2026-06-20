@@ -158,10 +158,8 @@ struct MainPanelView: View {
     private func grantActivePermission() {
         switch store.captureMode {
         case .systemAudio:
-            store.openSystemAudioPermissionSettings()
             Task { await store.requestScreenRecordingPermission() }
         case .microphone:
-            store.openMicrophonePermissionSettings()
             Task { await store.requestMicrophonePermission() }
         case .preview:
             break
